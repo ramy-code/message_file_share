@@ -56,13 +56,19 @@ public class Server extends AbstractHost{
 						
 						//une fois reçu ajouter le client à la liste
 						ClientLog client = new ClientLog(username, connectionSocket);
-						if(!clientsList.contains(client)) {
-							clientsList.add(client);
-							//Lancer Thread d'écoute
-							runListenThread(client);
-						}else {
-							connectionSocket.close();
+						synchronized(clientsList) {
+							if(!clientsList.contains(client)) {
+								clientsList.add(client);
+								//Lancer Thread d'écoute
+								runListenThread(client);
+							}else {
+								client.close();
+								System.out.println("Client déjà connecté !");
+							}
 						}
+						System.out.println("liste des clients: ");
+						for(ClientLog c : clientsList)
+							System.out.println(c.username);
 					}
 					catch(IOException e)
 					{
@@ -86,12 +92,13 @@ public class Server extends AbstractHost{
 		/*
 		 * Lit le username du client qui vient de se connecter (c'est le premier message que le client envoie)
 		 */
-		int index = 0;
+		
 		//Lecture de la taille du username
 		int remainingBytes = is.read();
 		
 		byte buffer[] = new byte[30];
 		int size = 0;
+		int index = 0;
 		while(remainingBytes > 0)	{
 			size = is.read(buffer, index, remainingBytes);
 			if(size < 0)
@@ -115,52 +122,29 @@ public class Server extends AbstractHost{
 				//Boucle d'écoute des messages reçus
 				InputStream is = client.is;
 				while(client.connected.get())
-				{					
+				{
+					System.err.println("Entered while loop");
 					try { 
 						messageProcessor(client, readStream(is));
-					}catch(ClosedConnectionException cce) {
+					}catch(IOException e) {
 						if(client.connected.get()) {
-							client.close();
+							try {
+								client.close();
+							} catch (IOException e1) {
+								e1.printStackTrace();
+							}
 						}
-					}catch (IOException e) {
-							e.printStackTrace();
 					}
+				}
+				
+				System.err.println("Exited while loop");
+				synchronized(clientsList) {
+					clientsList.remove(client);
 				}
 			}
 		});
 		
 		listenThread.start();
-	}
-	
-	private byte[] readStream(InputStream is) throws IOException
-	{	
-		//Lecture de taille de message
-		int messageSize = 0;
-
-		//Lecture de la taille du message
-		ByteBuffer sBuf = ByteBuffer.allocate(4); //size byte buffer
-		for(int i = 0; i < 4; i++) {
-			int sb = is.read();
-			if(sb < 0) throw new ClosedConnectionException("Connexion fermée par le pair");
-			sBuf.put((byte) sb);
-		}
-		messageSize = sBuf.getInt(0);
-		final int messageSize_copy = messageSize;
-		System.out.println("Size of received message : " + messageSize);
-
-		byte[] buffer = new byte[4096];
-		int index = 0;
-		while(messageSize > 0)
-		{
-			int size = is.read(buffer, index, messageSize);
-			if(size < 0) //Si outputStream de l'autre pair est fermé alors fermer ce socket
-				throw new ClosedConnectionException("Connexion fermée par le pair");
-			
-			index += size;
-			messageSize -= size;
-		}
-		
-		return Arrays.copyOf(buffer, messageSize_copy);
 	}
 	
 	private byte messageProcessor(ClientLog sender, byte[] buffer)
@@ -214,10 +198,12 @@ public class Server extends AbstractHost{
 		return 0;
 	}
 	
-	private synchronized void broadcastMessage(ClientLog sender, String message) {
-		for(ClientLog client : clientsList) {
-			if(!client.equals(sender)) {
-				sendMessage(client, FLAG_MESSAGE, message);
+	private void broadcastMessage(ClientLog sender, String message) {
+		synchronized(clientsList) {
+			for(ClientLog client : clientsList) {
+				if(!client.equals(sender)) {
+					sendMessage(client, FLAG_MESSAGE, message);
+				}
 			}
 		}
 	}
@@ -257,5 +243,12 @@ public class Server extends AbstractHost{
 			messageBytes.put(byteArrayMessage);
 		
 		sendMessage(client, messageBytes.array());
+	}
+	
+	public static void main(String[] args) throws UnknownHostException, IOException, InterruptedException {
+		Server serveur = new Server(DEFAULT_PORT);
+		serveur.waitForConnections();
+		Thread.sleep(5000);
+		serveur.sendMessage(serveur.clientsList.get(0), serveur.FLAG_MESSAGE, "ceci est un message test de la part du serveur ;)");
 	}
 }

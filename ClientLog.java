@@ -22,14 +22,17 @@ public class ClientLog {
 		this.ipAddress = connectionSocket.getInetAddress();
 	}
 	
-	public void close() {
+	public void close() throws IOException {
 		connected.set(false);
-		throw new UnsupportedOperationException("Close method Not yet implemented");
+		is.close();
+		os.close();
+		connectionSocket.close();
+		//throw new UnsupportedOperationException("Close method Not yet implemented");
 	}
 	
 	@Override
 	public boolean equals(Object o) {
 		ClientLog other = (ClientLog) o;
-		return this.ipAddress.equals(other.ipAddress);
+		return this.username.equals(other.username); //|| this.ipAddress.equals(other.ipAddress);
 	}
 }
