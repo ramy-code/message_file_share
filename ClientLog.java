@@ -1,12 +1,13 @@
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ClientLog {
 	public String username;
-	//private InetAddress ipAddress;
+	public InetAddress ipAddress;
 	public Socket connectionSocket;
 	public InputStream is;
 	public OutputStream os;
@@ -17,10 +18,18 @@ public class ClientLog {
 		this.connectionSocket = connectionSocket;
 		this.is = connectionSocket.getInputStream();
 		this.os = connectionSocket.getOutputStream();
-		//this.ipAddress = connectionSocket.getInetAddress();
+		this.connected.set(true);
+		this.ipAddress = connectionSocket.getInetAddress();
 	}
 	
 	public void close() {
+		connected.set(false);
 		throw new UnsupportedOperationException("Close method Not yet implemented");
+	}
+	
+	@Override
+	public boolean equals(Object o) {
+		ClientLog other = (ClientLog) o;
+		return this.ipAddress.equals(other.ipAddress);
 	}
 }
