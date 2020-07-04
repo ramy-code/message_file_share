@@ -5,6 +5,8 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.util.LinkedList;
+import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Client extends AbstractHost{
@@ -13,6 +15,7 @@ public class Client extends AbstractHost{
 	OutputStream os;
 	InputStream is;
 	protected volatile AtomicBoolean connected = new AtomicBoolean(false);
+	LinkedList<String> inbox;
 
 	public Client(String ServerIP, String username) throws UnknownHostException, IOException
 	{
@@ -29,6 +32,7 @@ public class Client extends AbstractHost{
 		sendUsername(username);
 		connected.set(true);
 		System.out.println("Username enregistré");
+		inbox = new LinkedList<String>();
 	}
 	
 	public void sendUsername(String username) throws IOException {
@@ -80,6 +84,9 @@ public class Client extends AbstractHost{
 		{
 			case FLAG_MESSAGE:
 				String message = new String(buffer, 1, buffer.length - 1);
+				synchronized (inbox) {
+					inbox.addLast(message);
+				}
 				System.out.println(message);
 				break;
 				
@@ -118,8 +125,25 @@ public class Client extends AbstractHost{
 		return 0;
 	}
 	
-	public static void main(String args[]) throws UnknownHostException, IOException {
-		Client client = new Client("192.168.1.41", "yaacineusername");
+	public void close() {
+		connected.set(false);
+		try {
+			is.close();
+			os.close();
+			connectionSocket.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public static void main(String args[]) throws UnknownHostException, IOException, InterruptedException {
+		Scanner sc = new Scanner(System.in);
+		System.out.println("Connexion au serveur 192.168.1.41");
+		System.out.println("Veuillez entrer votre username:");
+		Client client = new Client("192.168.1.41", sc.nextLine());
 		client.runListenThread();
+		while(true) {
+			client.sendMessage(client.os, sc.nextLine());
+		}
 	}
 }

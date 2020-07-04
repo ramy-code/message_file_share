@@ -1,5 +1,6 @@
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -198,57 +199,28 @@ public class Server extends AbstractHost{
 		return 0;
 	}
 	
-	private void broadcastMessage(ClientLog sender, String message) {
+	private void broadcastMessage(ClientLog sender, byte[] message) {
 		synchronized(clientsList) {
 			for(ClientLog client : clientsList) {
-				if(!client.equals(sender)) {
-					sendMessage(client, FLAG_MESSAGE, message);
-				}
+				if(!client.equals(sender))
+					sendMessage(client.os, message);
 			}
 		}
 	}
 	
-	private void sendMessage(ClientLog client, byte[] message) //Envoie un tableau de Byte brute
-	{
-		try {
-			client.os.write(message);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+	private void broadcastMessage(ClientLog sender, byte command, String message) {
+		byte[] formattedMessage = formatMessage(command, message);
+		broadcastMessage(sender, formattedMessage);
 	}
-
-	private void sendMessage(ClientLog client, byte command, String data)
-	{
-		/*
-		 * Envoie une commande de type 'command' contenant les données dans 'message'
-		 */
-		
-		int messageSize = 0;
-		byte[] byteArrayMessage = null;
-		
-		if(data != null) {
-			byteArrayMessage = data.getBytes();
-			messageSize = byteArrayMessage.length;
-		}
-		
-		ByteBuffer messageBytes = ByteBuffer.allocate(messageSize + 5);
-		
-		//écriture de la taille de message
-		/*for (byte b : ByteBuffer.allocate(4).putInt(messageSize + 1).array())
-			messageBytes.put(b);
-		*/
-		messageBytes.putInt(messageSize + 1);
-		messageBytes.put(command); // écriture de la commande
-		if(data != null) // écriture du message
-			messageBytes.put(byteArrayMessage);
-		
-		sendMessage(client, messageBytes.array());
+	
+	private void broadcastMessage(ClientLog sender, String message) {
+		broadcastMessage(sender, FLAG_MESSAGE, message);
 	}
 	
 	public static void main(String[] args) throws UnknownHostException, IOException, InterruptedException {
 		Server serveur = new Server(DEFAULT_PORT);
 		serveur.waitForConnections();
-		Thread.sleep(5000);
-		serveur.sendMessage(serveur.clientsList.get(0), serveur.FLAG_MESSAGE, "ceci est un message test de la part du serveur ;)");
+		Thread.sleep(10000);
+		//serveur.broadcastMessage(null ,"ceci est un message test de la part du serveur");
 	}
 }

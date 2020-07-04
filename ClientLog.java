@@ -27,7 +27,6 @@ public class ClientLog {
 		is.close();
 		os.close();
 		connectionSocket.close();
-		//throw new UnsupportedOperationException("Close method Not yet implemented");
 	}
 	
 	@Override
