@@ -148,6 +148,15 @@ public class Server extends AbstractHost{
 		listenThread.start();
 	}
 	
+	private ClientLog getClientByName(String username) {
+		for(ClientLog c : clientsList) {
+			if(c.username.equals(username))
+				return c;
+		}
+		
+		return null;
+	}
+	
 	private byte messageProcessor(ClientLog sender, byte[] buffer)
 	{
 		if(buffer == null || buffer.length < 1)
@@ -156,12 +165,28 @@ public class Server extends AbstractHost{
 		/*out += connectionSocket.getInetAddress().getHostName() + ":" + 
 				connectionSocket.getPort() + " :> ";*/
 		
+		String message;
 		switch(buffer[0])
 		{
 			case FLAG_MESSAGE:
-				String message = sender.username + ": ";;
+				message = sender.username + ": ";
 				message += new String(buffer, 1, buffer.length - 1);
 				broadcastMessage(sender, message);
+				break;
+				
+			case FLAG_PRIVATE_MESSAGE:
+				String data = new String(buffer, 1, buffer.length - 1);
+				
+				int separator = data.indexOf(';');
+				if(separator > 0) {
+					String username = data.substring(0, separator);
+					ClientLog receiver = getClientByName(username);
+					if(receiver != null) {
+						message = sender.username + " (en privé): ";
+						message += data.substring(separator+1, data.length());
+						sendMessage(receiver.os, formatMessage(FLAG_PRIVATE_MESSAGE, message));
+					}
+				}
 				break;
 				
 			/*case FLAG_DATA_STREAM_OFFER: 

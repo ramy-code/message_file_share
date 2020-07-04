@@ -83,6 +83,7 @@ public class Client extends AbstractHost{
 		switch(buffer[0])
 		{
 			case FLAG_MESSAGE:
+			case FLAG_PRIVATE_MESSAGE:
 				String message = new String(buffer, 1, buffer.length - 1);
 				synchronized (inbox) {
 					inbox.addLast(message);
