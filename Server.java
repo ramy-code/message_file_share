@@ -124,7 +124,7 @@ public class Server extends AbstractHost{
 				InputStream is = client.is;
 				while(client.connected.get())
 				{
-					System.err.println("Entered while loop");
+					//System.err.println("Entered while loop");
 					try { 
 						messageProcessor(client, readStream(is));
 					}catch(IOException e) {
@@ -138,10 +138,12 @@ public class Server extends AbstractHost{
 					}
 				}
 				
-				System.err.println("Exited while loop");
+				//System.err.println("Exited while loop");
 				synchronized(clientsList) {
 					clientsList.remove(client);
 				}
+				
+				broadcastMessage(null, client.username + " s'est déconnecté.");
 			}
 		});
 		
@@ -149,9 +151,11 @@ public class Server extends AbstractHost{
 	}
 	
 	private ClientLog getClientByName(String username) {
-		for(ClientLog c : clientsList) {
-			if(c.username.equals(username))
-				return c;
+		synchronized (clientsList) {
+			for(ClientLog c : clientsList) {
+				if(c.username.equals(username))
+					return c;
+			}
 		}
 		
 		return null;
@@ -227,8 +231,9 @@ public class Server extends AbstractHost{
 	private void broadcastMessage(ClientLog sender, byte[] message) {
 		synchronized(clientsList) {
 			for(ClientLog client : clientsList) {
-				if(!client.equals(sender))
+				if(!client.equals(sender)) {
 					sendMessage(client.os, message);
+				}
 			}
 		}
 	}
@@ -245,7 +250,5 @@ public class Server extends AbstractHost{
 	public static void main(String[] args) throws UnknownHostException, IOException, InterruptedException {
 		Server serveur = new Server(DEFAULT_PORT);
 		serveur.waitForConnections();
-		Thread.sleep(10000);
-		//serveur.broadcastMessage(null ,"ceci est un message test de la part du serveur");
 	}
 }

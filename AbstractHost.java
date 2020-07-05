@@ -19,6 +19,8 @@ public abstract class AbstractHost {
 	protected final byte FLAG_FILE_SEND_ACCEPT = (byte) 0x04;
 	protected final byte FLAG_FILE_SEND_DENY = (byte) 0x05;
 	protected final byte FLAG_PRIVATE_MESSAGE = (byte) 0x06;
+	protected final byte FLAG_CONNECTED_MESSAGE = (byte) 0x07;
+	protected final byte FLAG_DISCONNECTED_MESSAGE = (byte) 0x08;
 	
 	public class ClosedConnectionException extends IOException {
 		public ClosedConnectionException(String string) {
@@ -69,7 +71,7 @@ public abstract class AbstractHost {
 		return Arrays.copyOf(buffer, messageSize_copy);
 	}
 	
-	protected void sendMessage(OutputStream os, byte[] message) //Envoie un tableau de Byte brute
+	protected synchronized void sendMessage(OutputStream os, byte[] message) //Envoie un tableau de Byte brute
 	{
 		try {
 			os.write(message);
@@ -81,11 +83,6 @@ public abstract class AbstractHost {
 	protected void sendMessage(OutputStream os, String message)
 	{
 		sendMessage(os, formatMessage(FLAG_MESSAGE, message));
-	}
-	
-	protected void sendPrivateMessage(OutputStream os, String message) //format of the 'message' parameter: "username;actual_message"
-	{
-		sendMessage(os, formatMessage(FLAG_PRIVATE_MESSAGE, message));
 	}
 
 	public static byte[] formatMessage(byte command, String data)

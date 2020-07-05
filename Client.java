@@ -84,6 +84,8 @@ public class Client extends AbstractHost{
 		{
 			case FLAG_MESSAGE:
 			case FLAG_PRIVATE_MESSAGE:
+			case FLAG_CONNECTED_MESSAGE:
+			case FLAG_DISCONNECTED_MESSAGE:
 				String message = new String(buffer, 1, buffer.length - 1);
 				synchronized (inbox) {
 					inbox.addLast(message);
@@ -124,6 +126,11 @@ public class Client extends AbstractHost{
 		//System.out.println(out);
 		
 		return 0;
+	}
+	
+	protected void sendPrivateMessage(OutputStream os, String username, String message) //format of the 'message' parameter: "username;actual_message"
+	{
+		sendMessage(os, formatMessage(FLAG_PRIVATE_MESSAGE, username + ';' + message));
 	}
 	
 	public void close() {

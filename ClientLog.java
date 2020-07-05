@@ -31,6 +31,10 @@ public class ClientLog {
 	
 	@Override
 	public boolean equals(Object o) {
+		if(o == null)
+			return false;
+		if(this == o)
+			return true;
 		ClientLog other = (ClientLog) o;
 		return this.username.equals(other.username); //|| this.ipAddress.equals(other.ipAddress);
 	}
