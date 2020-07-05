@@ -193,17 +193,25 @@ public class Server extends AbstractHost{
 				}
 				break;
 				
+			case FLAG_CLIENTS_LIST:
+				String list = "";
+				for(ClientLog client : clientsList) {
+					list += client.username + ";";
+				}
+				sendMessage(sender.os, formatMessage(FLAG_CLIENTS_LIST, list));
+				break;
+				
 			/*case FLAG_DATA_STREAM_OFFER: 
 				out+= "Open data socket offer received, port : " + 
 						Integer.valueOf(new String(buffer, 1, buffer.length - 1));
 				System.out.println(out);
-				return FLAG_DATA_STREAM_OFFER;
+				return FLAG_DATA_STREAM_OFFER;*/
 				
-			case FLAG_FILE_SEND_RQST:
+			/*case FLAG_FILE_SEND_RQST:
 				if(!fileTransfert.get()) { 
 					StringTokenizer st = new StringTokenizer(new String(buffer, 1, buffer.length - 1));
 					try {
-						receiveFile(st.nextToken(), Long.valueOf(st.nextToken()));
+						receiveFile(client, st.nextToken(), Long.valueOf(st.nextToken()));
 					}catch(Exception e) {
 						e.printStackTrace();
 						fileTransfert.set(false);
@@ -212,7 +220,7 @@ public class Server extends AbstractHost{
 				else denyFileShare();
 				break;
 				
-			case FLAG_FILE_SEND_ACCEPT:
+			/*case FLAG_FILE_SEND_ACCEPT:
 				approvedSend.set(true);
 				semWaitApproval.release();
 				break;

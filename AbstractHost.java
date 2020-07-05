@@ -21,6 +21,7 @@ public abstract class AbstractHost {
 	protected final byte FLAG_PRIVATE_MESSAGE = (byte) 0x06;
 	protected final byte FLAG_CONNECTED_MESSAGE = (byte) 0x07;
 	protected final byte FLAG_DISCONNECTED_MESSAGE = (byte) 0x08;
+	protected final byte FLAG_CLIENTS_LIST = (byte) 0x09;
 	
 	public class ClosedConnectionException extends IOException {
 		public ClosedConnectionException(String string) {
