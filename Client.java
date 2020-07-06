@@ -57,7 +57,7 @@ public class Client extends AbstractHost{
 		os.write(messageBytes.array());
 	}
 	
-	private void runListenThread()
+	public void runListenThread()
 	{
 		Thread listenThread = new Thread(new Runnable() {
 			public void run()
@@ -106,7 +106,7 @@ public class Client extends AbstractHost{
 				clientsList = new LinkedList<String>();
 				while(st.hasMoreTokens()) {
 					String cl = st.nextToken();
-					System.out.println(cl);
+					//System.out.println(cl);
 					clientsList.add(cl);
 				}
 				
@@ -166,7 +166,7 @@ public class Client extends AbstractHost{
 	}
 	
 	public static void main(String args[]) throws UnknownHostException, IOException, InterruptedException {
-		Scanner sc = new Scanner(System.in);
+		/*Scanner sc = new Scanner(System.in);
 		System.out.println("Connexion au serveur 192.168.1.41");
 		System.out.println("Veuillez entrer votre username:");
 		Client client = new Client("192.168.1.41", sc.nextLine());
@@ -176,6 +176,6 @@ public class Client extends AbstractHost{
 		client.requestClientsList();
 		while(true) {
 			client.sendMessage(client.os, sc.nextLine());
-		}
+		}*/
 	}
 }

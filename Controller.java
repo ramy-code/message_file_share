@@ -1,12 +1,17 @@
+import javafx.beans.Observable;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.concurrent.ScheduledService;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.util.Duration;
 
 import java.io.IOException;
+import java.util.LinkedList;
 
 public class Controller {
     @FXML
@@ -15,6 +20,9 @@ public class Controller {
     TextField messagefield;
     @FXML
     TextArea chatarea;
+    @FXML
+    ListView userlist;
+
     String ip,port,username;
 
     static Client client;
@@ -31,12 +39,19 @@ public class Controller {
         userlabel.setText(username);
         client.runListenThread();
         service = new UpdateCheckService();
-        service.setPeriod(Duration.millis(100));
+        service.setPeriod(Duration.millis(200));
         service.setRestartOnFailure(true);
         service.setOnSucceeded(e -> {
             if (service.getValue()){
-                String msg = client.inbox.poll();
-                chatarea.appendText(msg + "\n");
+                Message msg = client.inbox.poll();
+                if(msg.type==AbstractHost.FLAG_MESSAGE) {
+                    chatarea.appendText(msg.content + "\n");
+                }
+                if(msg.type==AbstractHost.FLAG_CLIENTS_LIST){
+                    ObservableList<String> list = FXCollections.observableList(client.clientsList);
+                    userlist.setItems(list);
+                    userlist.refresh();
+                }
             }
         });
         service.start();
@@ -63,6 +78,7 @@ public class Controller {
 
                 @Override
                 protected Boolean call() throws Exception {
+                    client.requestClientsList();
                     if(!client.inbox.isEmpty()){
                         return true;
                     }
