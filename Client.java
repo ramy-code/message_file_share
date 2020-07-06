@@ -1,3 +1,6 @@
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -8,6 +11,7 @@ import java.nio.ByteBuffer;
 import java.util.LinkedList;
 import java.util.Scanner;
 import java.util.StringTokenizer;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Client extends AbstractHost{
@@ -147,6 +151,56 @@ public class Client extends AbstractHost{
 		//System.out.println(out);
 		
 		return 0;
+	}
+	
+	protected void sendFile(String name, int length, byte[] data) {
+		//send file-share request
+		String request = name + "|" + length;
+		System.out.println("size : " + length);
+		sendMessage(os, formatMessage(FLAG_FILE, request));		
+		
+		try {
+			os.write(data);
+			System.out.println("Finished sending");
+		}catch (IOException e)	{
+			close();
+			e.printStackTrace();
+		}
+	}
+	
+	protected void sendFile(String filePath)
+	{
+		//pas encore terminée
+		System.out.println("sending : " + filePath);
+		
+		File f = new File(filePath);
+		if(!f.exists()) {
+			System.err.println("Fichier ou dossier inexistant : " + filePath);
+			return;
+		}
+		
+		if(f.isDirectory()) {
+			System.err.println("Ceci est un dossier, veuillez choisir un fichier");
+			return;
+		}
+		
+		//send file-share request
+		try {
+			//Read file and send it
+			BufferedInputStream fileBis = new BufferedInputStream(new FileInputStream(f));
+			byte[] internalBuffer = new byte[(int) f.length()];
+			fileBis.read(internalBuffer);
+			
+			/*while((b = fileBis.read(internalBuffer)) != -1) {
+				os.write(internalBuffer, 0, b);
+				count += b;
+			}*/
+			
+			fileBis.close();
+			sendFile(f.getName(), (int) f.length(), internalBuffer);
+		}catch (IOException e)	{
+			e.printStackTrace();
+		}
 	}
 	
 	protected void sendPrivateMessage(OutputStream os, String username, String message) //format of the 'message' parameter: "username;actual_message"

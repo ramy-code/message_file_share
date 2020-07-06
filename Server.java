@@ -8,11 +8,16 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.LinkedList;
+import java.util.StringTokenizer;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 public class Server extends AbstractHost{
 	private LinkedList<ClientLog> clientsList;
 	private ServerSocket serverSocket;
 	private String localIP;
+	private volatile Semaphore semWaitApproval = new Semaphore(0, true);
+	private volatile Semaphore semApproved = new Semaphore(0, true);
 
 	public Server() throws UnknownHostException, IOException
 	{
@@ -201,39 +206,69 @@ public class Server extends AbstractHost{
 				sendMessage(sender.os, formatMessage(FLAG_CLIENTS_LIST, list));
 				break;
 				
-			/*case FLAG_DATA_STREAM_OFFER: 
-				out+= "Open data socket offer received, port : " + 
-						Integer.valueOf(new String(buffer, 1, buffer.length - 1));
-				System.out.println(out);
-				return FLAG_DATA_STREAM_OFFER;*/
-				
-			/*case FLAG_FILE_SEND_RQST:
-				if(!fileTransfert.get()) { 
-					StringTokenizer st = new StringTokenizer(new String(buffer, 1, buffer.length - 1));
-					try {
-						receiveFile(client, st.nextToken(), Long.valueOf(st.nextToken()));
-					}catch(Exception e) {
-						e.printStackTrace();
-						fileTransfert.set(false);
-					}
+			case FLAG_FILE:
+				StringTokenizer st = new StringTokenizer(new String(buffer, 1, buffer.length - 1), "|");
+				try {
+					String fileName = st.nextToken();
+					int length = Integer.valueOf(st.nextToken());
+					byte[] fileData = receiveFile(sender.is, length);
+					broadcastFile(sender, fileName, length, fileData);
+				}catch(Exception e) {
+					e.printStackTrace();
 				}
-				else denyFileShare();
 				break;
-				
-			/*case FLAG_FILE_SEND_ACCEPT:
-				approvedSend.set(true);
-				semWaitApproval.release();
+			
+			case FLAG_FILE_SEND_ACCEPT:
+				semApproved.release();
 				break;
 				
 			case FLAG_FILE_SEND_DENY:
 				approvedSend.set(false);
 				semWaitApproval.release();
 				break;
-			*/
+				
+			/*case FLAG_DATA_STREAM_OFFER: 
+				out+= "Open data socket offer received, port : " + 
+						Integer.valueOf(new String(buffer, 1, buffer.length - 1));
+				System.out.println(out);
+				return FLAG_DATA_STREAM_OFFER;*/
 		}
 		//System.out.println(out);
 		
 		return 0;
+	}
+	
+	private void broadcastFile(ClientLog sender, String fileName, int length, byte[] fileData) {
+		synchronized(clientsList) {
+			for(ClientLog client : clientsList) {
+				if(!client.equals(sender)) {
+					sendFile(client.os, fileName, length, fileData);
+				}
+			}
+		}
+	}
+	
+	private void sendFile(OutputStream os, String fileName, int length, byte[] fileData) {
+		//Envoie de la demande de transfert de fichier
+		sendMessage(os, formatMessage(FLAG_FILE_SEND_RQST, fileName + " (" + length + " octets)"));
+		
+		//Lancement du thread qui attend la réponse et envoie le fichier
+		Thread fileTransfertThread = new Thread(new Runnable() {
+			public void run()
+			{
+				try {
+					if(semWaitApproval.tryAcquire(30, TimeUnit.SECONDS)) {
+						if(semApproved.tryAcquire(0, TimeUnit.SECONDS)) {
+							//à continuer Envoyer ici le fichier
+						}
+					}
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+		});
+		
+		fileTransfertThread.start();
 	}
 	
 	private void broadcastMessage(ClientLog sender, byte[] message) {
