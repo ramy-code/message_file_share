@@ -124,7 +124,7 @@ public class Server extends AbstractHost{
 				InputStream is = client.is;
 				while(client.connected.get())
 				{
-					System.err.println("Entered while loop");
+					//System.err.println("Entered while loop");
 					try { 
 						messageProcessor(client, readStream(is));
 					}catch(IOException e) {
@@ -138,10 +138,12 @@ public class Server extends AbstractHost{
 					}
 				}
 				
-				System.err.println("Exited while loop");
+				//System.err.println("Exited while loop");
 				synchronized(clientsList) {
 					clientsList.remove(client);
 				}
+				
+				broadcastMessage(null, client.username + " s'est déconnecté.");
 			}
 		});
 		
@@ -149,9 +151,11 @@ public class Server extends AbstractHost{
 	}
 	
 	private ClientLog getClientByName(String username) {
-		for(ClientLog c : clientsList) {
-			if(c.username.equals(username))
-				return c;
+		synchronized (clientsList) {
+			for(ClientLog c : clientsList) {
+				if(c.username.equals(username))
+					return c;
+			}
 		}
 		
 		return null;
@@ -189,17 +193,25 @@ public class Server extends AbstractHost{
 				}
 				break;
 				
+			case FLAG_CLIENTS_LIST:
+				String list = "";
+				for(ClientLog client : clientsList) {
+					list += client.username + ";";
+				}
+				sendMessage(sender.os, formatMessage(FLAG_CLIENTS_LIST, list));
+				break;
+				
 			/*case FLAG_DATA_STREAM_OFFER: 
 				out+= "Open data socket offer received, port : " + 
 						Integer.valueOf(new String(buffer, 1, buffer.length - 1));
 				System.out.println(out);
-				return FLAG_DATA_STREAM_OFFER;
+				return FLAG_DATA_STREAM_OFFER;*/
 				
-			case FLAG_FILE_SEND_RQST:
+			/*case FLAG_FILE_SEND_RQST:
 				if(!fileTransfert.get()) { 
 					StringTokenizer st = new StringTokenizer(new String(buffer, 1, buffer.length - 1));
 					try {
-						receiveFile(st.nextToken(), Long.valueOf(st.nextToken()));
+						receiveFile(client, st.nextToken(), Long.valueOf(st.nextToken()));
 					}catch(Exception e) {
 						e.printStackTrace();
 						fileTransfert.set(false);
@@ -208,7 +220,7 @@ public class Server extends AbstractHost{
 				else denyFileShare();
 				break;
 				
-			case FLAG_FILE_SEND_ACCEPT:
+			/*case FLAG_FILE_SEND_ACCEPT:
 				approvedSend.set(true);
 				semWaitApproval.release();
 				break;
@@ -227,8 +239,9 @@ public class Server extends AbstractHost{
 	private void broadcastMessage(ClientLog sender, byte[] message) {
 		synchronized(clientsList) {
 			for(ClientLog client : clientsList) {
-				if(!client.equals(sender))
+				if(!client.equals(sender)) {
 					sendMessage(client.os, message);
+				}
 			}
 		}
 	}
@@ -245,7 +258,5 @@ public class Server extends AbstractHost{
 	public static void main(String[] args) throws UnknownHostException, IOException, InterruptedException {
 		Server serveur = new Server(DEFAULT_PORT);
 		serveur.waitForConnections();
-		Thread.sleep(10000);
-		//serveur.broadcastMessage(null ,"ceci est un message test de la part du serveur");
 	}
 }

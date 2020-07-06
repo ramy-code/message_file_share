@@ -7,17 +7,18 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.LinkedList;
 import java.util.Scanner;
+import java.util.StringTokenizer;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-
-
-public class Client extends AbstractHost {
-
+public class Client extends AbstractHost{
+	
 	Socket connectionSocket;
 	OutputStream os;
 	InputStream is;
 	protected volatile AtomicBoolean connected = new AtomicBoolean(false);
-	LinkedList<String> inbox;
+	LinkedList<Message> inbox;
+	String username;
+	LinkedList<String> clientsList = null;
 
 	public Client(String ServerIP, String username) throws UnknownHostException, IOException
 	{
@@ -34,7 +35,8 @@ public class Client extends AbstractHost {
 		sendUsername(username);
 		connected.set(true);
 		System.out.println("Username enregistré");
-		inbox = new LinkedList<String>();
+		inbox = new LinkedList<Message>();
+		this.username = username;
 	}
 	
 	public void sendUsername(String username) throws IOException {
@@ -55,7 +57,7 @@ public class Client extends AbstractHost {
 		os.write(messageBytes.array());
 	}
 	
-	protected void runListenThread()
+	private void runListenThread()
 	{
 		Thread listenThread = new Thread(new Runnable() {
 			public void run()
@@ -77,6 +79,10 @@ public class Client extends AbstractHost {
 		listenThread.start();
 	}
 	
+	public void requestClientsList() {
+		sendMessage(os, formatMessage(FLAG_CLIENTS_LIST, null));
+	}
+	
 	private byte messageProcessor(byte[] buffer)
 	{
 		if(buffer == null || buffer.length < 1)
@@ -86,11 +92,26 @@ public class Client extends AbstractHost {
 		{
 			case FLAG_MESSAGE:
 			case FLAG_PRIVATE_MESSAGE:
+			case FLAG_CONNECTED_MESSAGE:
+			case FLAG_DISCONNECTED_MESSAGE:
 				String message = new String(buffer, 1, buffer.length - 1);
 				synchronized (inbox) {
-					inbox.addLast(message);
+					inbox.addLast(new Message(FLAG_MESSAGE, message));
 				}
 				System.out.println(message);
+				break;
+				
+			case FLAG_CLIENTS_LIST: //Les usernames des clients arrivent dans un seul String séparés par des ';' la liste est mise à jour
+				StringTokenizer st = new StringTokenizer(new String(buffer, 1, buffer.length - 1), ";");
+				clientsList = new LinkedList<String>();
+				while(st.hasMoreTokens()) {
+					String cl = st.nextToken();
+					System.out.println(cl);
+					clientsList.add(cl);
+				}
+				
+				inbox.addLast(new Message(FLAG_CLIENTS_LIST, null)); /*Ajoute un message dans l'inbox qui alerte que la liste d'utilisateurs
+				a été mise à jour*/
 				break;
 				
 			/*case FLAG_DATA_STREAM_OFFER: 
@@ -128,6 +149,11 @@ public class Client extends AbstractHost {
 		return 0;
 	}
 	
+	protected void sendPrivateMessage(OutputStream os, String username, String message) //format of the 'message' parameter: "username;actual_message"
+	{
+		sendMessage(os, formatMessage(FLAG_PRIVATE_MESSAGE, username + ';' + message));
+	}
+	
 	public void close() {
 		connected.set(false);
 		try {
@@ -141,18 +167,15 @@ public class Client extends AbstractHost {
 	
 	public static void main(String args[]) throws UnknownHostException, IOException, InterruptedException {
 		Scanner sc = new Scanner(System.in);
-		System.out.println("Connexion au serveur 192.168.1.7");
+		System.out.println("Connexion au serveur 192.168.1.41");
 		System.out.println("Veuillez entrer votre username:");
-		Client client = new Client("192.168.1.7", sc.nextLine());
+		Client client = new Client("192.168.1.41", sc.nextLine());
 		client.runListenThread();
+		Thread.sleep(500);
+		System.out.println("Liste des clients connectés: ");
+		client.requestClientsList();
 		while(true) {
 			client.sendMessage(client.os, sc.nextLine());
 		}
 	}
-
-
-
-
-
-
 }
