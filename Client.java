@@ -11,6 +11,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.net.SocketAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
@@ -124,10 +125,8 @@ public class Client extends AbstractHost{
 			case FLAG_CLIENTS_LIST: //Les usernames des clients arrivent dans un seul String séparés par des ';' la liste est mise à jour
 				StringTokenizer st = new StringTokenizer(new String(buffer, 1, buffer.length - 1), ";");
 				clientsList = new LinkedList<String>();
-				System.out.println("Liste des clients mise à jour: ");
 				while(st.hasMoreTokens()) {
 					String cl = st.nextToken();
-					System.out.println(cl);
 					clientsList.add(cl);
 				}
 				
@@ -255,27 +254,61 @@ public class Client extends AbstractHost{
 		return data;
 	}
 	
-	public void broadcastServerDiscovery(int port) throws IOException {
-		DatagramSocket UDPSocket = new DatagramSocket(0, InetAddress.getByName(getLocalAddress()));
-		DatagramPacket[] dpArray = new DatagramPacket[10];
+	public void broadcastServerDiscovery(int port) {
+		//Diffuse aux serveurs potentiels le port UDP sur lequel envoyer leur IP et port de connexion
 		
-		ByteBuffer bytesPortBuffer = ByteBuffer.allocate(5);
-		bytesPortBuffer.put(FLAG_SERVER_DISCOVERY); //écriture de flag dans le packet
-		bytesPortBuffer.put(ByteBuffer.allocate(4).putInt(port).array()); //écriture du port dans le packet
-		byte[] bytesPort = bytesPortBuffer.array();
-		
-		for(int i = 0; i < dpArray.length && UDPPort + i <= 65535; i++)
-		{
-			dpArray[i] = new DatagramPacket(bytesPort, bytesPort.length, InetAddress.getByName("255.255.255.255"), UDPPort+i);
-		}
-		
-		for(DatagramPacket dp : dpArray) {
-			if(dp != null);
-				UDPSocket.send(dp);
-		}
-		
-		UDPSocket.close();
+		Thread broadcastThread = new Thread(new Runnable() {
+		public void run() {
+			try {
+				DatagramSocket UDPSocket = new DatagramSocket(0, InetAddress.getByName(getLocalAddress()));
+				
+				DatagramPacket[] dpArray = new DatagramPacket[10];
+				
+				ByteBuffer bytesPortBuffer = ByteBuffer.allocate(5);
+				bytesPortBuffer.put(FLAG_SERVER_DISCOVERY); //écriture de flag dans le packet
+				bytesPortBuffer.put(ByteBuffer.allocate(4).putInt(port).array()); //écriture du port dans le packet
+				byte[] bytesPort = bytesPortBuffer.array();
+				
+				for(int i = 0; i < dpArray.length && UDPPort + i <= 65535; i++)
+				{
+					dpArray[i] = new DatagramPacket(bytesPort, bytesPort.length, InetAddress.getByName("255.255.255.255"), UDPPort+i);
+				}
+				
+				for(DatagramPacket dp : dpArray) {
+					if(dp != null);
+						UDPSocket.send(dp);
+				}
+				
+				UDPSocket.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		});
+	
+		broadcastThread.start();
 	}
+	
+	/*public SocketAddress waitServerAdvertistment() {
+		//Se met en écoute aux advertisments des serveurs potentiels
+		byte[] dpBuffer = new byte[5];
+		DatagramPacket packet = new DatagramPacket(dpBuffer, dpBuffer.length);
+		int receivedPort = -1;
+		
+		try {
+			udpSocket.receive(packet); //en écoute des messages de découverte (se débloque si udpSocket est fermé de l'extérieur)
+			if(dpBuffer[0] == FLAG_SERVER_DISCOVERY) {
+				receivedPort = ByteBuffer.wrap(packet.getData(), 1, 4).getInt();
+				ByteBuffer bbuf = ByteBuffer.allocate(5);
+				bbuf.put(FLAG_SERVER_AD);
+				bbuf.putInt(port);
+				DatagramPacket responsePacket = new DatagramPacket(bbuf.array(), 5, udpSocket.getInetAddress(), receivedPort);
+				udpSocket.send(responsePacket);
+			}
+		} catch (IOException e) {
+				return;
+		}
+	}*/
 	
 	public static void main(String args[]) throws UnknownHostException, IOException, InterruptedException {
 		Scanner sc = new Scanner(System.in);

@@ -30,6 +30,7 @@ public abstract class AbstractHost {
 	protected final static byte FLAG_CLIENTS_LIST = (byte) 0x09;
 	protected final static byte FLAG_FILE = (byte) 0x0a;
 	protected final static byte FLAG_SERVER_DISCOVERY = (byte) 0x0b;
+	protected final static byte FLAG_SERVER_AD = (byte) 0x0c;
 	
 	public volatile int avancement_transfert = 0;
 	

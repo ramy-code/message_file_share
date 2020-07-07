@@ -20,9 +20,11 @@ import java.util.concurrent.atomic.AtomicReference;
 public class Server extends AbstractHost{
 	private LinkedList<ClientLog> clientsList;
 	private ServerSocket serverSocket;
-	private String localIP;
+	public String localIP;
+	public int port;
 	private volatile Semaphore semWaitApproval = new Semaphore(0, true);
 	private volatile Semaphore semApproved = new Semaphore(0, true);
+	private volatile DatagramSocket udpSocket = null;
 
 	public Server() throws UnknownHostException, IOException
 	{
@@ -52,7 +54,7 @@ public class Server extends AbstractHost{
 		Thread listenThread = new Thread(new Runnable() {
 			public void run()
 			{
-				//runDiscoveryListener();
+				udpSocket = runDiscoveryListener();
 				while(true) {
 					System.out.println("En attente de connexion sur l'addresse : " + serverSocket.getLocalSocketAddress() +  "...");
 					try
@@ -314,53 +316,61 @@ public class Server extends AbstractHost{
 		broadcastMessage(sender, FLAG_MESSAGE, message);
 	}
 	
-	/*private void runDiscoveryListener() throws UnknownHostException {
+	private DatagramSocket runDiscoveryListener() {
 		//Lance un thread qui reste en écoute aux messages de découverte
-		try {
-			Thread discoveryListenThread = new Thread(new Runnable() {
-				public void run() {
-					Thread listenThread = null;
-					DatagramSocket ds_array = null;
-					boolean socketOpened = false;
-					for(int i = 0; i < 10 && !socketOpened; i++) {
-						try {
-							ds_array = new DatagramSocket(UDPPort + i, InetAddress.getByName(getLocalAddress()));
-							socketOpened = true;
-						} catch (SocketException | UnknownHostException e) {
-							e.printStackTrace();
-						}
-					}
-					
-					if(!socketOpened) {
-						System.err.println("Could not open discovery listener");
-						return;
-					}
-					
+		boolean socketOpened = false;
+		for(int i = 0; i < 10 && !socketOpened; i++) {
+			try {
+				udpSocket = new DatagramSocket(UDPPort + i, InetAddress.getByName(getLocalAddress()));
+				socketOpened = true;
+			} catch (SocketException | UnknownHostException e) {
+				e.printStackTrace();
+			}
+		}
+		
+		if(!socketOpened) {
+			System.err.println("Could not open discovery listener");
+			return null;
+		}
+		
+		Thread discoveryListenThread = new Thread(new Runnable() {
+			public void run() {
+				while(true) { //reste en écoute tant que udpSocket reste ouvert
 					byte[] dpBuffer = new byte[5];
-					DatagramSocket ds = ds_array;
 					DatagramPacket packet = new DatagramPacket(dpBuffer, dpBuffer.length);
 					int receivedPort = -1;
 					
 					try {
-						ds.setSoTimeout(10000);
-						ds.receive(packet);
-						receivedPort = ByteBuffer.wrap(packet.getData(), 0, 4).getInt();
-					} catch (SocketTimeoutException ste) {
+						udpSocket.receive(packet); //en écoute des messages de découverte (se débloque si udpSocket est fermé de l'extérieur)
+						if(dpBuffer[0] == FLAG_SERVER_DISCOVERY) {
+							receivedPort = ByteBuffer.wrap(packet.getData(), 1, 4).getInt();
+							ByteBuffer bbuf = ByteBuffer.allocate(5);
+							bbuf.put(FLAG_SERVER_AD);
+							bbuf.putInt(port);
+							DatagramPacket responsePacket = new DatagramPacket(bbuf.array(), 5, udpSocket.getInetAddress(), receivedPort);
+							udpSocket.send(responsePacket);
+						}
 					} catch (IOException e) {
-						if(!ds.isClosed()) //Si fermé depuis le thread principal
-							e.printStackTrace();
-					} finally {
-						if(!ds.isClosed())
-							ds.close();
+							return;
 					}
 				}
-			});
-			
-			discoveryListenThread.start();
-		} catch(SocketException e) {
+			}
+		});
+		
+		discoveryListenThread.start();
+		
+		return udpSocket;
+	}
+	
+	public void close() {
+		try {
+			serverSocket.close();
+			if(udpSocket != null)
+				udpSocket.close();
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
-	}*/
+	}
 	
 	public static void main(String[] args) throws UnknownHostException, IOException, InterruptedException {
 		Server serveur = new Server(DEFAULT_PORT);
