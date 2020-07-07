@@ -74,11 +74,11 @@ public class LoginController {
                 }
                 stage.setOnCloseRequest(new EventHandler<WindowEvent>() {
                     public void handle(WindowEvent event) {
-                        if(client != null) {
-                            client.close();
+                        if(c.client != null) {
+                            c.client.close();
                         }
-                        if(server != null){
-                            server.close();
+                        if(c.server != null){
+                            c.server.close();
                         }
                         Platform.exit();
                         //System.exit(0);
