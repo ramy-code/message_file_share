@@ -81,7 +81,7 @@ public class Server extends AbstractHost{
 								//Lancer Thread d'écoute
 								runListenThread(client);
 								broadcastClientList();
-								broadcastMessage(null, formatMessage(FLAG_MESSAGE, client.username + " vient de rejoindre la discussion."));
+								broadcastMessage(null, formatMessage(FLAG_MESSAGE, client.username + " has joined the chat."));
 								synchronized (connectionSockets) {
 									connectionSockets.add(connectionSocket);
 								}
@@ -167,7 +167,7 @@ public class Server extends AbstractHost{
 				}
 				
 				broadcastClientList();
-				broadcastMessage(null, client.username + " s'est déconnecté.");
+				broadcastMessage(null, client.username + " has disconnected.");
 			}
 		});
 		
@@ -210,7 +210,7 @@ public class Server extends AbstractHost{
 					String username = data.substring(0, separator);
 					ClientLog receiver = getClientByName(username);
 					if(receiver != null) {
-						message = sender.username + " (en privé): ";
+						message = sender.username + " (private): ";
 						message += data.substring(separator+1, data.length());
 						synchronized(receiver.os) {
 							sendMessage(receiver.os, formatMessage(FLAG_PRIVATE_MESSAGE, message));
@@ -390,5 +390,7 @@ public class Server extends AbstractHost{
 	public static void main(String[] args) throws UnknownHostException, IOException, InterruptedException {
 		Server serveur = new Server();
 		serveur.waitForConnections();
+		Thread.sleep(10000);
+		serveur.close();
 	}
 }
