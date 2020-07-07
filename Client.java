@@ -28,9 +28,9 @@ public class Client extends AbstractHost{
 	InputStream is;
 	protected volatile AtomicBoolean connected = new AtomicBoolean(false);
 	protected volatile Semaphore semWaitFileTransfert = new Semaphore(1, true);
-	LinkedList<Message> inbox;
-	String username;
-	LinkedList<String> clientsList = null;
+	public volatile LinkedList<Message> inbox;
+	public String username;
+	public volatile LinkedList<String> clientsList = null;
 
 	public Client(String ServerIP, String username) throws UnknownHostException, IOException
 	{
@@ -124,6 +124,7 @@ public class Client extends AbstractHost{
 			case FLAG_CLIENTS_LIST: //Les usernames des clients arrivent dans un seul String séparés par des ';' la liste est mise à jour
 				StringTokenizer st = new StringTokenizer(new String(buffer, 1, buffer.length - 1), ";");
 				clientsList = new LinkedList<String>();
+				System.out.println("Liste des clients mise à jour: ");
 				while(st.hasMoreTokens()) {
 					String cl = st.nextToken();
 					System.out.println(cl);

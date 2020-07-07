@@ -315,6 +315,7 @@ public class Server extends AbstractHost{
 	}
 	
 	/*private void runDiscoveryListener() throws UnknownHostException {
+		//Lance un thread qui reste en écoute aux messages de découverte
 		try {
 			Thread discoveryListenThread = new Thread(new Runnable() {
 				public void run() {
@@ -335,7 +336,7 @@ public class Server extends AbstractHost{
 						return;
 					}
 					
-					byte[] dpBuffer = new byte[4096];
+					byte[] dpBuffer = new byte[5];
 					DatagramSocket ds = ds_array;
 					DatagramPacket packet = new DatagramPacket(dpBuffer, dpBuffer.length);
 					int receivedPort = -1;
