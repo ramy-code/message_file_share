@@ -1,3 +1,4 @@
+import javafx.application.Platform;
 import javafx.beans.Observable;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -62,7 +63,7 @@ public class Controller {
     public void initialize() throws IOException {
         System.out.println(ip+username);
         //Stage stage = (Stage) ap.getScene().getWindow();
-        client = new Client(ip, username);
+        client = new Client(ip, Integer.valueOf(port),username);
         userlabel.setText(username);
         client.runListenThread();
         service = new UpdateCheckService();
@@ -127,7 +128,7 @@ public class Controller {
                 String txt = m.group(2);
                 try {
                     client.sendPrivateMessage(client.os, dest, txt);
-                    chatarea.appendText("you sent a private message to [" + dest + "]: " + txt);
+                    chatarea.appendText("Private message to [" + dest + "]: " + txt);
                     messagefield.clear();
                 } catch (Exception e) {
                     chatarea.appendText("[Message not sent] : User not found or offline");
@@ -171,11 +172,8 @@ public class Controller {
     }
     public void disconnect(){
         client.close();
-        if(server != null){
-            //System.exit(0);
-            //server.close();
-        }
-        Stage fenetre = (Stage) buttonclose.getScene().getWindow();
-        fenetre.close();
+        if(server != null)
+            server.close();
+        Platform.exit();
     }
 }

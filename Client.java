@@ -7,8 +7,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketAddress;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.LinkedList;
@@ -25,8 +30,8 @@ public class Client extends AbstractHost{
 	InputStream is;
 	protected volatile AtomicBoolean connected = new AtomicBoolean(false);
 	protected volatile Semaphore semWaitFileTransfert = new Semaphore(1, true);
-	LinkedList<Message> inbox;
-	String username;
+	public volatile LinkedList<Message> inbox;
+	public String username;
 	public volatile LinkedList<String> clientsList = null;
 
 	public Client(String ServerIP, String username) throws UnknownHostException, IOException
@@ -123,7 +128,6 @@ public class Client extends AbstractHost{
 				clientsList = new LinkedList<String>();
 				while(st.hasMoreTokens()) {
 					String cl = st.nextToken();
-					//System.out.println(cl);
 					clientsList.add(cl);
 				}
 				
@@ -251,18 +255,95 @@ public class Client extends AbstractHost{
 		return data;
 	}
 	
+	public static InetSocketAddress broadcastServerDiscovery() {
+		//Diffuse aux serveurs potentiels le port UDP sur lequel envoyer leur IP et port de connexion (dans un thread) et attend la réponse ici
+		
+		DatagramSocket udpsocket;
+		try {
+			udpsocket = new DatagramSocket();
+		} catch (SocketException e1) {
+			e1.printStackTrace();
+			return null;
+		}
+		
+		int port = udpsocket.getLocalPort();
+		Thread broadcastThread = new Thread(new Runnable() {
+		public void run() {
+			try {
+				DatagramSocket UDPSocket = new DatagramSocket(0, InetAddress.getByName(getLocalAddress()));
+				
+				DatagramPacket[] dpArray = new DatagramPacket[10];
+				
+				ByteBuffer bytesPortBuffer = ByteBuffer.allocate(5);
+				bytesPortBuffer.put(FLAG_SERVER_DISCOVERY); //écriture de flag dans le packet
+				bytesPortBuffer.put(ByteBuffer.allocate(4).putInt(port).array()); //écriture du port dans le packet
+				byte[] bytesPort = bytesPortBuffer.array();
+				
+				for(int i = 0; i < dpArray.length && UDPPort + i <= 65535; i++)
+				{
+					dpArray[i] = new DatagramPacket(bytesPort, bytesPort.length, InetAddress.getByName("255.255.255.255"), UDPPort+i);
+				}
+				
+				for(DatagramPacket dp : dpArray) {
+					if(dp != null);
+						UDPSocket.send(dp);
+				}
+				
+				UDPSocket.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		});
+	
+		broadcastThread.start();
+		
+		return waitServerAdvertistment(udpsocket);
+	}
+	
+	public static InetSocketAddress waitServerAdvertistment(DatagramSocket udpSocket) {
+		//Se met en écoute aux advertisments des serveurs potentiels
+		//!---------le socket donné en paramètre doit être instancié à l'avance------------!
+		InetSocketAddress serverInfo = null;
+		try {
+			InetAddress serverIP = null;
+			int serverPort = -1;
+			udpSocket.setSoTimeout(3000);
+			byte[] dpBuffer = new byte[5];
+			DatagramPacket packet = new DatagramPacket(dpBuffer, dpBuffer.length);
+			udpSocket.receive(packet); //en écoute des messages de découverte (se débloque au bout de 3000ms)
+			if(dpBuffer[0] == FLAG_SERVER_AD) {
+				//serverIP = udpSocket.getInetAddress();
+				serverIP = packet.getAddress();
+				serverPort = ByteBuffer.wrap(packet.getData(), 1, 4).getInt();
+				serverInfo = new InetSocketAddress(serverIP, serverPort);
+				udpSocket.close();
+			}
+		} catch (IOException e) {
+				e.printStackTrace();
+		} finally {
+			return serverInfo;
+		}
+	}
+	
 	public static void main(String args[]) throws UnknownHostException, IOException, InterruptedException {
 		Scanner sc = new Scanner(System.in);
-		System.out.println("Connexion au serveur 192.168.1.41");
+		//System.out.println("Connexion au serveur 192.168.1.41");
+		InetSocketAddress serverInfo = Client.broadcastServerDiscovery();
 		System.out.println("Veuillez entrer votre username:");
-		Client client = new Client("192.168.1.41", sc.nextLine());
+		Client client = null;;
+		if(serverInfo != null) {
+			System.out.println("Connexion au serveur " + serverInfo.getAddress().getHostAddress() + ":" + serverInfo.getPort());
+			client = new Client(serverInfo.getAddress().getHostAddress(), serverInfo.getPort(), sc.nextLine());
+		}
+		else System.err.println("serverInfo Null");
 		client.runListenThread();
-		Thread.sleep(500);
+		/*Thread.sleep(500);
 		System.out.println("Liste des clients connectés: ");
 		client.requestClientsList();
 		sc.nextLine();
-		client.sendFile("C:\\Users\\YacineM\\Desktop\\memes\\cringe.png");
-		/*/while(true) {
+		//client.sendFile("C:\\Users\\YacineM\\Desktop\\memes\\cringe.png");
+		//while(true) {
 			//client.sendMessage(client.os, sc.nextLine());
 			//Thread.sleep(2000);
 			client.acceptFileTransfert();

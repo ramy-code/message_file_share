@@ -36,6 +36,6 @@ public class ClientLog {
 		if(this == o)
 			return true;
 		ClientLog other = (ClientLog) o;
-		return this.username.equals(other.username); //|| this.ipAddress.equals(other.ipAddress);
+		return this.username.equals(other.username);
 	}
 }

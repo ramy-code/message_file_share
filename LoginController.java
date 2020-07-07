@@ -15,6 +15,7 @@ import javafx.stage.WindowEvent;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 
 import static javafx.stage.StageStyle.UNDECORATED;
 
@@ -33,10 +34,23 @@ public class LoginController {
     Server server=null;
     public void initialize(){
         portfield.setText(String.valueOf(AbstractHost.DEFAULT_PORT));
+        Thread t = new Thread(new Runnable() {
+            public void run()
+            {
+                InetSocketAddress socketAddress = Client.broadcastServerDiscovery();
+                if(socketAddress != null){
+                    ipfield.setText(socketAddress.getAddress().getHostAddress());
+                    portfield.setText(String.valueOf(socketAddress.getPort()));
+                }
+            }
+        });
+
+        t.start();
+
         connectbutton.setOnAction(event -> {
             if(serverbox.isSelected()){
                 try {
-                    server = new Server(AbstractHost.DEFAULT_PORT);
+                    server = new Server(Integer.valueOf(portfield.getText()));
                     ipfield.setText(server.localIP);
                     ipfield.commitValue();
                     server.waitForConnections();
@@ -56,15 +70,15 @@ public class LoginController {
                 Controller c = loader.getController();
                 if(server != null){
                     c.server = server;
-                    c.headerlabel.setText(c.headerlabel.getText() + " [" + server.localIP+":"+AbstractHost.DEFAULT_PORT+"]");
+                    c.headerlabel.setText(c.headerlabel.getText() + " [" + server.localIP+":"+String.valueOf(server.port)+"]");
                 }
                 stage.setOnCloseRequest(new EventHandler<WindowEvent>() {
                     public void handle(WindowEvent event) {
-                        if(server != null){
-                            //server.close();
-                        }
                         if(client != null) {
                             client.close();
+                        }
+                        if(server != null){
+                            server.close();
                         }
                         Platform.exit();
                         //System.exit(0);
