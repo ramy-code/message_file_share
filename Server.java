@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class Server extends AbstractHost{
 	private LinkedList<ClientLog> clientsList;
 	private ServerSocket serverSocket;
-	private String localIP;
+	public String localIP;
 	private volatile Semaphore semWaitApproval = new Semaphore(0, true);
 	private volatile Semaphore semApproved = new Semaphore(0, true);
 

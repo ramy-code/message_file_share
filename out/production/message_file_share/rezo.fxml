@@ -74,7 +74,7 @@
                   <Image url="@group.png" />
                </image>
             </ImageView>
-            <Label layoutX="20.0" layoutY="20.0" text="#chatroom" textFill="WHITE">
+            <Label fx:id="headerlabel" layoutX="20.0" layoutY="20.0" text="#chatroom" textFill="WHITE">
                <font>
                   <Font name="Consolas Bold" size="16.0" />
                </font>

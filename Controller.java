@@ -34,6 +34,9 @@ public class Controller {
     AnchorPane ap;
     @FXML
     Button buttonclose;
+    @FXML
+    Label headerlabel;
+
     Stage stage;
 
     String ip,port,username;
@@ -41,7 +44,9 @@ public class Controller {
 
 
     static Client client;
+    Server server = null;
     UpdateCheckService service;
+    public Controller(){}
     public Controller(String ip,String port,String username){
         this.ip = ip;
         this.port = port;
@@ -166,6 +171,10 @@ public class Controller {
     }
     public void disconnect(){
         client.close();
+        if(server != null){
+            //System.exit(0);
+            //server.close();
+        }
         Stage fenetre = (Stage) buttonclose.getScene().getWindow();
         fenetre.close();
     }
