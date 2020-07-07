@@ -67,6 +67,7 @@ public class Server extends AbstractHost{
 								clientsList.add(client);
 								//Lancer Thread d'écoute
 								runListenThread(client);
+								broadcastMessage(null, formatMessage(FLAG_MESSAGE, client.username + " vient de rejoindre la discussion."));
 							}else {
 								client.close();
 								System.out.println("Client déjà connecté !");
@@ -193,7 +194,9 @@ public class Server extends AbstractHost{
 					if(receiver != null) {
 						message = sender.username + " (en privé): ";
 						message += data.substring(separator+1, data.length());
-						sendMessage(receiver.os, formatMessage(FLAG_PRIVATE_MESSAGE, message));
+						synchronized(receiver.os) {
+							sendMessage(receiver.os, formatMessage(FLAG_PRIVATE_MESSAGE, message));
+						}
 					}
 				}
 				break;
@@ -203,7 +206,9 @@ public class Server extends AbstractHost{
 				for(ClientLog client : clientsList) {
 					list += client.username + ";";
 				}
-				sendMessage(sender.os, formatMessage(FLAG_CLIENTS_LIST, list));
+				synchronized(sender.os) {
+					sendMessage(sender.os, formatMessage(FLAG_CLIENTS_LIST, list));
+				}
 				break;
 				
 			case FLAG_FILE:
@@ -220,20 +225,13 @@ public class Server extends AbstractHost{
 			
 			case FLAG_FILE_SEND_ACCEPT:
 				semApproved.release();
-				break;
-				
-			case FLAG_FILE_SEND_DENY:
-				approvedSend.set(false);
 				semWaitApproval.release();
 				break;
 				
-			/*case FLAG_DATA_STREAM_OFFER: 
-				out+= "Open data socket offer received, port : " + 
-						Integer.valueOf(new String(buffer, 1, buffer.length - 1));
-				System.out.println(out);
-				return FLAG_DATA_STREAM_OFFER;*/
+			case FLAG_FILE_SEND_DENY:
+				semWaitApproval.release();
+				break;
 		}
-		//System.out.println(out);
 		
 		return 0;
 	}
@@ -250,17 +248,25 @@ public class Server extends AbstractHost{
 	
 	private void sendFile(OutputStream os, String fileName, int length, byte[] fileData) {
 		//Envoie de la demande de transfert de fichier
-		sendMessage(os, formatMessage(FLAG_FILE_SEND_RQST, fileName + " (" + length + " octets)"));
+		synchronized(os) {
+			sendMessage(os, formatMessage(FLAG_FILE_SEND_RQST, fileName + " (" + length + " octets)"));
+		}
 		
 		//Lancement du thread qui attend la réponse et envoie le fichier
 		Thread fileTransfertThread = new Thread(new Runnable() {
 			public void run()
 			{
 				try {
-					if(semWaitApproval.tryAcquire(30, TimeUnit.SECONDS)) {
+					if(semWaitApproval.tryAcquire(60, TimeUnit.SECONDS)) {
 						if(semApproved.tryAcquire(0, TimeUnit.SECONDS)) {
-							//à continuer Envoyer ici le fichier
+							//Transfert de fichier accepté par le client: commencer à envoyer
+							System.out.println("trasfert de fichier accepté");
+							synchronized(os) {
+								sendMessage(os, formatMessage(FLAG_FILE, fileName + "|" + length));
+								sendMessage(os, fileData);
+							}
 						}
+						else System.out.println("transfert de fichier refusé");
 					}
 				} catch (InterruptedException e) {
 					e.printStackTrace();
@@ -275,7 +281,9 @@ public class Server extends AbstractHost{
 		synchronized(clientsList) {
 			for(ClientLog client : clientsList) {
 				if(!client.equals(sender)) {
-					sendMessage(client.os, message);
+					synchronized(client.os) {
+						sendMessage(client.os, message);
+					}
 				}
 			}
 		}

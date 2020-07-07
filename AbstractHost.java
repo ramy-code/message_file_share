@@ -29,7 +29,7 @@ public abstract class AbstractHost {
 	protected final byte FLAG_CLIENTS_LIST = (byte) 0x09;
 	protected final byte FLAG_FILE = (byte) 0x0a;
 	
-	public int avancement_transfert = 0;
+	public volatile int avancement_transfert = 0;
 	
 	public class ClosedConnectionException extends IOException {
 		public ClosedConnectionException(String string) {
@@ -80,7 +80,7 @@ public abstract class AbstractHost {
 		return Arrays.copyOf(buffer, messageSize_copy);
 	}
 	
-	protected synchronized void sendMessage(OutputStream os, byte[] message) //Envoie un tableau de Byte brute
+	protected void sendMessage(OutputStream os, byte[] message) //Envoie un tableau de Byte brute
 	{
 		try {
 			os.write(message);
@@ -119,7 +119,7 @@ public abstract class AbstractHost {
 		return messageBytes.array();
 	}
 	
-	protected byte[] receiveFile(InputStream is, int length) throws IOException
+	protected byte[] receiveFile(InputStream is, int length) throws IOException //recoit un fichier et le retourne sous forme de tableau de bytes
 	{		
 		int b = 0;
 		int readBytes = 0;
@@ -130,7 +130,7 @@ public abstract class AbstractHost {
 		while(readBytes < length && (b = is.read(internalBuffer, index, Math.min(BUFFER_SIZE, length - readBytes))) != -1)
 		{
 			readBytes += b;
-			
+			index += b;
 			//Mise à jour de l'affichage de l'avancement
 			avancement_transfert = readBytes*100/length;
 			System.out.println("Avancement : " + avancement_transfert + "%");

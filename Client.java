@@ -1,6 +1,9 @@
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -11,6 +14,7 @@ import java.nio.ByteBuffer;
 import java.util.LinkedList;
 import java.util.Scanner;
 import java.util.StringTokenizer;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -20,6 +24,7 @@ public class Client extends AbstractHost{
 	OutputStream os;
 	InputStream is;
 	protected volatile AtomicBoolean connected = new AtomicBoolean(false);
+	protected volatile Semaphore semWaitFileTransfert = new Semaphore(1, true);
 	LinkedList<Message> inbox;
 	String username;
 	LinkedList<String> clientsList = null;
@@ -61,6 +66,12 @@ public class Client extends AbstractHost{
 		os.write(messageBytes.array());
 	}
 	
+	@Override
+	protected byte[] readStream(InputStream is) throws IOException {
+		semWaitFileTransfert.release(); //Libère sémaphore pour pouvoir être utilisé pour un transfert de fichier ou le prochain message
+		return super.readStream(is);
+	}
+	
 	private void runListenThread()
 	{
 		Thread listenThread = new Thread(new Runnable() {
@@ -70,8 +81,9 @@ public class Client extends AbstractHost{
 				while(connected.get())
 				{					
 					try { 
+						semWaitFileTransfert.acquire(); //vérifie qu'il n'y a pas de transfert de fichiers en cours
 						messageProcessor(readStream(is));
-					}catch(IOException e) {
+					}catch(IOException | InterruptedException e) {
 						if(connected.get()) {
 							close();
 						}
@@ -92,13 +104,14 @@ public class Client extends AbstractHost{
 		if(buffer == null || buffer.length < 1)
 			return -1;
 		
+		String message = null;
 		switch(buffer[0])
 		{
 			case FLAG_MESSAGE:
 			case FLAG_PRIVATE_MESSAGE:
 			case FLAG_CONNECTED_MESSAGE:
 			case FLAG_DISCONNECTED_MESSAGE:
-				String message = new String(buffer, 1, buffer.length - 1);
+				message = new String(buffer, 1, buffer.length - 1);
 				synchronized (inbox) {
 					inbox.addLast(new Message(FLAG_MESSAGE, message));
 				}
@@ -118,39 +131,42 @@ public class Client extends AbstractHost{
 				a été mise à jour*/
 				break;
 				
-			/*case FLAG_DATA_STREAM_OFFER: 
-				out+= "Open data socket offer received, port : " + 
-						Integer.valueOf(new String(buffer, 1, buffer.length - 1));
-				System.out.println(out);
-				return FLAG_DATA_STREAM_OFFER;
-				
 			case FLAG_FILE_SEND_RQST:
-				if(!fileTransfert.get()) { 
-					StringTokenizer st = new StringTokenizer(new String(buffer, 1, buffer.length - 1));
+				message = new String(buffer, 1, buffer.length - 1);
+				synchronized (inbox) {
+					inbox.addLast(new Message(FLAG_FILE_SEND_RQST, message));
+				}
+				System.out.println(message);
+				break;
+				
+			case FLAG_FILE:
+				message = new String(buffer, 1, buffer.length - 1);
+				synchronized (inbox) {
+					inbox.addLast(new Message(FLAG_FILE, message));
 					try {
-						receiveFile(st.nextToken(), Long.valueOf(st.nextToken()));
-					}catch(Exception e) {
+						semWaitFileTransfert.acquire();
+					} catch (InterruptedException e) {
 						e.printStackTrace();
-						fileTransfert.set(false);
 					}
 				}
-				else denyFileShare();
+				System.out.println(message);
 				break;
-				
-			case FLAG_FILE_SEND_ACCEPT:
-				approvedSend.set(true);
-				semWaitApproval.release();
-				break;
-				
-			case FLAG_FILE_SEND_DENY:
-				approvedSend.set(false);
-				semWaitApproval.release();
-				break;
-			*/
 		}
-		//System.out.println(out);
 		
 		return 0;
+	}
+	
+	public void saveFile(String path, byte[] data) { //Enregistre les données de 'data' dans un fichier dans le chemin 'path'
+		File f = new File(path);
+		FileOutputStream fos = null;
+		try {
+			fos = new FileOutputStream(f);
+			fos.write(data);
+			fos.flush();
+			fos.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	protected void sendFile(String name, int length, byte[] data) {
@@ -203,6 +219,14 @@ public class Client extends AbstractHost{
 		}
 	}
 	
+	public void refuseFileTransfert() {
+		sendMessage(os, formatMessage(FLAG_FILE_SEND_DENY, null));
+	}
+	
+	public void acceptFileTransfert() {
+		sendMessage(os, formatMessage(FLAG_FILE_SEND_ACCEPT, null));
+	}
+	
 	protected void sendPrivateMessage(OutputStream os, String username, String message) //format of the 'message' parameter: "username;actual_message"
 	{
 		sendMessage(os, formatMessage(FLAG_PRIVATE_MESSAGE, username + ';' + message));
@@ -219,6 +243,14 @@ public class Client extends AbstractHost{
 		}
 	}
 	
+	@Override
+	public byte[] receiveFile(InputStream is, int length) throws IOException {
+		byte[] data =  super.receiveFile(is, length);
+		semWaitFileTransfert.release(); //Libère le thread qui essaie de lire des messages
+		
+		return data;
+	}
+	
 	public static void main(String args[]) throws UnknownHostException, IOException, InterruptedException {
 		Scanner sc = new Scanner(System.in);
 		System.out.println("Connexion au serveur 192.168.1.41");
@@ -228,8 +260,21 @@ public class Client extends AbstractHost{
 		Thread.sleep(500);
 		System.out.println("Liste des clients connectés: ");
 		client.requestClientsList();
-		while(true) {
-			client.sendMessage(client.os, sc.nextLine());
-		}
+		sc.nextLine();
+		client.sendFile("C:\\Users\\YacineM\\Desktop\\memes\\cringe.png");
+		/*/while(true) {
+			//client.sendMessage(client.os, sc.nextLine());
+			//Thread.sleep(2000);
+			client.acceptFileTransfert();
+			sc.nextLine();
+			while(client.inbox.size() > 0 && client.inbox.peekFirst().type != client.FLAG_FILE) {
+				client.inbox.pop();
+			}
+			
+			String message = client.inbox.pop().content;
+			int length = Integer.valueOf(message.substring(message.indexOf("|") + 1));
+			byte[] data = client.receiveFile(client.is, length);
+			client.saveFile("C:/Users/YacineM/Desktop/testfile.png", data);
+		//}*/
 	}
 }
