@@ -16,18 +16,20 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public abstract class AbstractHost {
 	
 	protected volatile AtomicBoolean USER_INTERRUPTED = new AtomicBoolean(false);
-	protected final static int BUFFER_SIZE = 8096; //10 Ko
+	protected final static int BUFFER_SIZE = 8192; //8 Ko
 	protected final static int DEFAULT_PORT = 42999;
-	protected final byte FLAG_MESSAGE = (byte) 0x01;
-	protected final byte FLAG_DATA_STREAM_OFFER = (byte) 0x02;
-	protected final byte FLAG_FILE_SEND_RQST = (byte) 0x03;
-	protected final byte FLAG_FILE_SEND_ACCEPT = (byte) 0x04;
-	protected final byte FLAG_FILE_SEND_DENY = (byte) 0x05;
-	protected final byte FLAG_PRIVATE_MESSAGE = (byte) 0x06;
-	protected final byte FLAG_CONNECTED_MESSAGE = (byte) 0x07;
-	protected final byte FLAG_DISCONNECTED_MESSAGE = (byte) 0x08;
-	protected final byte FLAG_CLIENTS_LIST = (byte) 0x09;
-	protected final byte FLAG_FILE = (byte) 0x0a;
+	protected final static int UDPPort = 43000;
+	protected final static byte FLAG_MESSAGE = (byte) 0x01;
+	protected final static byte FLAG_DATA_STREAM_OFFER = (byte) 0x02;
+	protected final static byte FLAG_FILE_SEND_RQST = (byte) 0x03;
+	protected final static byte FLAG_FILE_SEND_ACCEPT = (byte) 0x04;
+	protected final static byte FLAG_FILE_SEND_DENY = (byte) 0x05;
+	protected final static byte FLAG_PRIVATE_MESSAGE = (byte) 0x06;
+	protected final static byte FLAG_CONNECTED_MESSAGE = (byte) 0x07;
+	protected final static byte FLAG_DISCONNECTED_MESSAGE = (byte) 0x08;
+	protected final static byte FLAG_CLIENTS_LIST = (byte) 0x09;
+	protected final static byte FLAG_FILE = (byte) 0x0a;
+	protected final static byte FLAG_SERVER_DISCOVERY = (byte) 0x0b;
 	
 	public volatile int avancement_transfert = 0;
 	

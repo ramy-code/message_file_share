@@ -7,8 +7,11 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.LinkedList;
@@ -72,7 +75,7 @@ public class Client extends AbstractHost{
 		return super.readStream(is);
 	}
 	
-	private void runListenThread()
+	public void runListenThread()
 	{
 		Thread listenThread = new Thread(new Runnable() {
 			public void run()
@@ -251,6 +254,28 @@ public class Client extends AbstractHost{
 		return data;
 	}
 	
+	public void broadcastServerDiscovery(int port) throws IOException {
+		DatagramSocket UDPSocket = new DatagramSocket(0, InetAddress.getByName(getLocalAddress()));
+		DatagramPacket[] dpArray = new DatagramPacket[10];
+		
+		ByteBuffer bytesPortBuffer = ByteBuffer.allocate(5);
+		bytesPortBuffer.put(FLAG_SERVER_DISCOVERY); //écriture de flag dans le packet
+		bytesPortBuffer.put(ByteBuffer.allocate(4).putInt(port).array()); //écriture du port dans le packet
+		byte[] bytesPort = bytesPortBuffer.array();
+		
+		for(int i = 0; i < dpArray.length && UDPPort + i <= 65535; i++)
+		{
+			dpArray[i] = new DatagramPacket(bytesPort, bytesPort.length, InetAddress.getByName("255.255.255.255"), UDPPort+i);
+		}
+		
+		for(DatagramPacket dp : dpArray) {
+			if(dp != null);
+				UDPSocket.send(dp);
+		}
+		
+		UDPSocket.close();
+	}
+	
 	public static void main(String args[]) throws UnknownHostException, IOException, InterruptedException {
 		Scanner sc = new Scanner(System.in);
 		System.out.println("Connexion au serveur 192.168.1.41");
@@ -261,8 +286,8 @@ public class Client extends AbstractHost{
 		System.out.println("Liste des clients connectés: ");
 		client.requestClientsList();
 		sc.nextLine();
-		client.sendFile("C:\\Users\\YacineM\\Desktop\\memes\\cringe.png");
-		/*/while(true) {
+		//client.sendFile("C:\\Users\\YacineM\\Desktop\\memes\\cringe.png");
+		//while(true) {
 			//client.sendMessage(client.os, sc.nextLine());
 			//Thread.sleep(2000);
 			client.acceptFileTransfert();

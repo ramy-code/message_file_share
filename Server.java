@@ -1,9 +1,13 @@
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -11,6 +15,7 @@ import java.util.LinkedList;
 import java.util.StringTokenizer;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class Server extends AbstractHost{
 	private LinkedList<ClientLog> clientsList;
@@ -47,6 +52,7 @@ public class Server extends AbstractHost{
 		Thread listenThread = new Thread(new Runnable() {
 			public void run()
 			{
+				//runDiscoveryListener();
 				while(true) {
 					System.out.println("En attente de connexion sur l'addresse : " + serverSocket.getLocalSocketAddress() +  "...");
 					try
@@ -297,6 +303,54 @@ public class Server extends AbstractHost{
 	private void broadcastMessage(ClientLog sender, String message) {
 		broadcastMessage(sender, FLAG_MESSAGE, message);
 	}
+	
+	/*private void runDiscoveryListener() throws UnknownHostException {
+	//Création de 10 Threads qui écoute sur 10 ports à partir de UDPPort
+		try {
+			Thread discoveryListenThread = new Thread(new Runnable() {
+				public void run() {
+					Thread listenThread = null;
+					DatagramSocket ds_array = null;
+					boolean socketOpened = false;
+					for(int i = 0; i < 10 && !socketOpened; i++) {
+						try {
+							ds_array = new DatagramSocket(UDPPort + i, InetAddress.getByName(getLocalAddress()));
+							socketOpened = true;
+						} catch (SocketException | UnknownHostException e) {
+							e.printStackTrace();
+						}
+					}
+					
+					if(!socketOpened) {
+						System.out.println("Could not open discovery listener");
+						return;
+					}
+					
+					byte[] dpBuffer = new byte[4096];
+					DatagramSocket ds = ds_array;
+					DatagramPacket packet = new DatagramPacket(dpBuffer, dpBuffer.length);
+					int receivedPort = -1;
+					
+					try {
+						ds.setSoTimeout(10000);
+						ds.receive(packet);
+						receivedPort = ByteBuffer.wrap(packet.getData(), 0, 4).getInt();
+					} catch (SocketTimeoutException ste) {
+					} catch (IOException e) {
+						if(!ds.isClosed()) //Si fermé depuis le thread principal
+							e.printStackTrace();
+					} finally {
+						if(!ds.isClosed())
+							ds.close();
+					}
+				}
+			});
+			
+			discoveryListenThread.start();
+		} catch(SocketException e) {
+			e.printStackTrace();
+		}
+	}*/
 	
 	public static void main(String[] args) throws UnknownHostException, IOException, InterruptedException {
 		Server serveur = new Server(DEFAULT_PORT);
