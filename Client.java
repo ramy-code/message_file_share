@@ -280,7 +280,7 @@ public class Client extends AbstractHost{
 		Scanner sc = new Scanner(System.in);
 		System.out.println("Connexion au serveur 192.168.1.41");
 		System.out.println("Veuillez entrer votre username:");
-		Client client = new Client("192.168.1.41", sc.nextLine());
+		Client client = new Client("192.168.1.36", sc.nextLine());
 		client.runListenThread();
 		Thread.sleep(500);
 		System.out.println("Liste des clients connectés: ");

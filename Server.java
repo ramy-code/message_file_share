@@ -73,6 +73,7 @@ public class Server extends AbstractHost{
 								clientsList.add(client);
 								//Lancer Thread d'écoute
 								runListenThread(client);
+								broadcastClientList();
 								broadcastMessage(null, formatMessage(FLAG_MESSAGE, client.username + " vient de rejoindre la discussion."));
 							}else {
 								client.close();
@@ -155,6 +156,7 @@ public class Server extends AbstractHost{
 					clientsList.remove(client);
 				}
 				
+				broadcastClientList();
 				broadcastMessage(null, client.username + " s'est déconnecté.");
 			}
 		});
@@ -242,6 +244,14 @@ public class Server extends AbstractHost{
 		return 0;
 	}
 	
+	private void broadcastClientList() {
+		String list = "";
+		for(ClientLog client : clientsList) {
+			list += client.username + ";";
+		}
+		broadcastMessage(null, FLAG_CLIENTS_LIST, list);
+	}
+	
 	private void broadcastFile(ClientLog sender, String fileName, int length, byte[] fileData) {
 		synchronized(clientsList) {
 			for(ClientLog client : clientsList) {
@@ -305,7 +315,6 @@ public class Server extends AbstractHost{
 	}
 	
 	/*private void runDiscoveryListener() throws UnknownHostException {
-	//Création de 10 Threads qui écoute sur 10 ports à partir de UDPPort
 		try {
 			Thread discoveryListenThread = new Thread(new Runnable() {
 				public void run() {
@@ -322,7 +331,7 @@ public class Server extends AbstractHost{
 					}
 					
 					if(!socketOpened) {
-						System.out.println("Could not open discovery listener");
+						System.err.println("Could not open discovery listener");
 						return;
 					}
 					
