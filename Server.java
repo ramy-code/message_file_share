@@ -1,60 +1,71 @@
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.LinkedList;
+import java.util.StringTokenizer;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class Server extends AbstractHost{
 	private LinkedList<ClientLog> clientsList;
 	private ServerSocket serverSocket;
 	private String localIP;
+	private volatile Semaphore semWaitApproval = new Semaphore(0, true);
+	private volatile Semaphore semApproved = new Semaphore(0, true);
 
 	public Server() throws UnknownHostException, IOException
 	{
 		this(getLocalAddress(), 0);
 	}
-	
+
 	public Server(int port) throws UnknownHostException, IOException
 	{
 		this(getLocalAddress(), port);
 	}
-	
+
 	public Server(String hostIP) throws UnknownHostException, IOException
 	{
 		this(hostIP, 0);
 	}
-	
+
 	public Server(String hostingIP, int port) throws UnknownHostException, IOException
 	{
 		localIP = hostingIP;
 		serverSocket = new ServerSocket(port, 10, InetAddress.getByName(localIP));
 		clientsList = new LinkedList<ClientLog>();
 	}
-	
+
 	public void waitForConnections()
 	{
 		//Déclaration du Thread attendant la connexion
 		Thread listenThread = new Thread(new Runnable() {
 			public void run()
 			{
+				//runDiscoveryListener();
 				while(true) {
 					System.out.println("En attente de connexion sur l'addresse : " + serverSocket.getLocalSocketAddress() +  "...");
 					try
 					{
 						Socket connectionSocket = serverSocket.accept();
-						System.out.println("Hôte " + connectionSocket.getInetAddress().getHostName() + " / " + 
+						System.out.println("Hôte " + connectionSocket.getInetAddress().getHostName() + " / " +
 								connectionSocket.getInetAddress().getHostAddress() +
 								":" + connectionSocket.getPort() + " connecté.");	//connection acceptée
-						
+
 						//attendre la reception du username
 						String username = fetchUsername(connectionSocket.getInputStream());
 						System.out.println("Username du client reçu: " + username);
-						
+
 						//une fois reçu ajouter le client à la liste
 						ClientLog client = new ClientLog(username, connectionSocket);
 						synchronized(clientsList) {
@@ -62,6 +73,8 @@ public class Server extends AbstractHost{
 								clientsList.add(client);
 								//Lancer Thread d'écoute
 								runListenThread(client);
+								broadcastClientList();
+								broadcastMessage(null, formatMessage(FLAG_MESSAGE, client.username + " vient de rejoindre la discussion."));
 							}else {
 								client.close();
 								System.out.println("Client déjà connecté !");
@@ -74,8 +87,8 @@ public class Server extends AbstractHost{
 					catch(IOException e)
 					{
 						/*
-						 * détecte si connexion impossible ou bien arrêtée par le thread principal 
-						*/
+						 * détecte si connexion impossible ou bien arrêtée par le thread principal
+						 */
 						if(!USER_INTERRUPTED.get()) {
 							System.err.println("Impossible de se connecter au client.");
 							e.printStackTrace();
@@ -85,18 +98,18 @@ public class Server extends AbstractHost{
 				}
 			}
 		});
-		
+
 		listenThread.start();
 	}
-	
+
 	private String fetchUsername(InputStream is) throws IOException {
 		/*
 		 * Lit le username du client qui vient de se connecter (c'est le premier message que le client envoie)
 		 */
-		
+
 		//Lecture de la taille du username
 		int remainingBytes = is.read();
-		
+
 		byte buffer[] = new byte[30];
 		int size = 0;
 		int index = 0;
@@ -104,17 +117,17 @@ public class Server extends AbstractHost{
 			size = is.read(buffer, index, remainingBytes);
 			if(size < 0)
 				break;
-			
+
 			index += size;
 			remainingBytes -= size;
 		}
-		
+
 		if(remainingBytes == -1 || size == -1)	//Si OutputStream du client est fermé alors fermer ce socket
 			throw new ClosedConnectionException("Connexion fermée par le client");
-		
+
 		return new String(buffer).trim();
 	}
-	
+
 	private void runListenThread(ClientLog client)
 	{
 		Thread listenThread = new Thread(new Runnable() {
@@ -125,7 +138,7 @@ public class Server extends AbstractHost{
 				while(client.connected.get())
 				{
 					//System.err.println("Entered while loop");
-					try { 
+					try {
 						messageProcessor(client, readStream(is));
 					}catch(IOException e) {
 						if(client.connected.get()) {
@@ -137,19 +150,20 @@ public class Server extends AbstractHost{
 						}
 					}
 				}
-				
+
 				//System.err.println("Exited while loop");
 				synchronized(clientsList) {
 					clientsList.remove(client);
 				}
-				
+
+				broadcastClientList();
 				broadcastMessage(null, client.username + " s'est déconnecté.");
 			}
 		});
-		
+
 		listenThread.start();
 	}
-	
+
 	private ClientLog getClientByName(String username) {
 		synchronized (clientsList) {
 			for(ClientLog c : clientsList) {
@@ -157,18 +171,18 @@ public class Server extends AbstractHost{
 					return c;
 			}
 		}
-		
+
 		return null;
 	}
-	
+
 	private byte messageProcessor(ClientLog sender, byte[] buffer)
 	{
 		if(buffer == null || buffer.length < 1)
 			return -1;
 		//String out = "";
-		/*out += connectionSocket.getInetAddress().getHostName() + ":" + 
+		/*out += connectionSocket.getInetAddress().getHostName() + ":" +
 				connectionSocket.getPort() + " :> ";*/
-		
+
 		String message;
 		switch(buffer[0])
 		{
@@ -177,10 +191,10 @@ public class Server extends AbstractHost{
 				message += new String(buffer, 1, buffer.length - 1);
 				broadcastMessage(sender, message);
 				break;
-				
+
 			case FLAG_PRIVATE_MESSAGE:
 				String data = new String(buffer, 1, buffer.length - 1);
-				
+
 				int separator = data.indexOf(';');
 				if(separator > 0) {
 					String username = data.substring(0, separator);
@@ -188,73 +202,165 @@ public class Server extends AbstractHost{
 					if(receiver != null) {
 						message = sender.username + " (en privé): ";
 						message += data.substring(separator+1, data.length());
-						sendMessage(receiver.os, formatMessage(FLAG_PRIVATE_MESSAGE, message));
+						synchronized(receiver.os) {
+							sendMessage(receiver.os, formatMessage(FLAG_PRIVATE_MESSAGE, message));
+						}
 					}
 				}
 				break;
-				
+
 			case FLAG_CLIENTS_LIST:
 				String list = "";
 				for(ClientLog client : clientsList) {
 					list += client.username + ";";
 				}
-				sendMessage(sender.os, formatMessage(FLAG_CLIENTS_LIST, list));
-				break;
-				
-			/*case FLAG_DATA_STREAM_OFFER: 
-				out+= "Open data socket offer received, port : " + 
-						Integer.valueOf(new String(buffer, 1, buffer.length - 1));
-				System.out.println(out);
-				return FLAG_DATA_STREAM_OFFER;*/
-				
-			/*case FLAG_FILE_SEND_RQST:
-				if(!fileTransfert.get()) { 
-					StringTokenizer st = new StringTokenizer(new String(buffer, 1, buffer.length - 1));
-					try {
-						receiveFile(client, st.nextToken(), Long.valueOf(st.nextToken()));
-					}catch(Exception e) {
-						e.printStackTrace();
-						fileTransfert.set(false);
-					}
+				synchronized(sender.os) {
+					sendMessage(sender.os, formatMessage(FLAG_CLIENTS_LIST, list));
 				}
-				else denyFileShare();
 				break;
-				
-			/*case FLAG_FILE_SEND_ACCEPT:
-				approvedSend.set(true);
+
+			case FLAG_FILE:
+				StringTokenizer st = new StringTokenizer(new String(buffer, 1, buffer.length - 1), "|");
+				try {
+					String fileName = st.nextToken();
+					int length = Integer.valueOf(st.nextToken());
+					byte[] fileData = receiveFile(sender.is, length);
+					broadcastFile(sender, fileName, length, fileData);
+				}catch(Exception e) {
+					e.printStackTrace();
+				}
+				break;
+
+			case FLAG_FILE_SEND_ACCEPT:
+				semApproved.release();
 				semWaitApproval.release();
 				break;
-				
+
 			case FLAG_FILE_SEND_DENY:
-				approvedSend.set(false);
 				semWaitApproval.release();
 				break;
-			*/
 		}
-		//System.out.println(out);
-		
+
 		return 0;
 	}
-	
-	private void broadcastMessage(ClientLog sender, byte[] message) {
+
+	private void broadcastClientList() {
+		String list = "";
+		for(ClientLog client : clientsList) {
+			list += client.username + ";";
+		}
+		broadcastMessage(null, FLAG_CLIENTS_LIST, list);
+	}
+
+	private void broadcastFile(ClientLog sender, String fileName, int length, byte[] fileData) {
 		synchronized(clientsList) {
 			for(ClientLog client : clientsList) {
 				if(!client.equals(sender)) {
-					sendMessage(client.os, message);
+					sendFile(client.os, fileName, length, fileData);
 				}
 			}
 		}
 	}
-	
+
+	private void sendFile(OutputStream os, String fileName, int length, byte[] fileData) {
+		//Envoie de la demande de transfert de fichier
+		synchronized(os) {
+			sendMessage(os, formatMessage(FLAG_FILE_SEND_RQST, fileName + " (" + length + " octets)"));
+		}
+
+		//Lancement du thread qui attend la réponse et envoie le fichier
+		Thread fileTransfertThread = new Thread(new Runnable() {
+			public void run()
+			{
+				try {
+					if(semWaitApproval.tryAcquire(60, TimeUnit.SECONDS)) {
+						if(semApproved.tryAcquire(0, TimeUnit.SECONDS)) {
+							//Transfert de fichier accepté par le client: commencer à envoyer
+							System.out.println("trasfert de fichier accepté");
+							synchronized(os) {
+								sendMessage(os, formatMessage(FLAG_FILE, fileName + "|" + length));
+								sendMessage(os, fileData);
+							}
+						}
+						else System.out.println("transfert de fichier refusé");
+					}
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+		});
+
+		fileTransfertThread.start();
+	}
+
+	private void broadcastMessage(ClientLog sender, byte[] message) {
+		synchronized(clientsList) {
+			for(ClientLog client : clientsList) {
+				if(!client.equals(sender)) {
+					synchronized(client.os) {
+						sendMessage(client.os, message);
+					}
+				}
+			}
+		}
+	}
+
 	private void broadcastMessage(ClientLog sender, byte command, String message) {
 		byte[] formattedMessage = formatMessage(command, message);
 		broadcastMessage(sender, formattedMessage);
 	}
-	
+
 	private void broadcastMessage(ClientLog sender, String message) {
 		broadcastMessage(sender, FLAG_MESSAGE, message);
 	}
-	
+
+	/*private void runDiscoveryListener() throws UnknownHostException {
+		try {
+			Thread discoveryListenThread = new Thread(new Runnable() {
+				public void run() {
+					Thread listenThread = null;
+					DatagramSocket ds_array = null;
+					boolean socketOpened = false;
+					for(int i = 0; i < 10 && !socketOpened; i++) {
+						try {
+							ds_array = new DatagramSocket(UDPPort + i, InetAddress.getByName(getLocalAddress()));
+							socketOpened = true;
+						} catch (SocketException | UnknownHostException e) {
+							e.printStackTrace();
+						}
+					}
+
+					if(!socketOpened) {
+						System.err.println("Could not open discovery listener");
+						return;
+					}
+
+					byte[] dpBuffer = new byte[4096];
+					DatagramSocket ds = ds_array;
+					DatagramPacket packet = new DatagramPacket(dpBuffer, dpBuffer.length);
+					int receivedPort = -1;
+
+					try {
+						ds.setSoTimeout(10000);
+						ds.receive(packet);
+						receivedPort = ByteBuffer.wrap(packet.getData(), 0, 4).getInt();
+					} catch (SocketTimeoutException ste) {
+					} catch (IOException e) {
+						if(!ds.isClosed()) //Si fermé depuis le thread principal
+							e.printStackTrace();
+					} finally {
+						if(!ds.isClosed())
+							ds.close();
+					}
+				}
+			});
+
+			discoveryListenThread.start();
+		} catch(SocketException e) {
+			e.printStackTrace();
+		}
+	}*/
+
 	public static void main(String[] args) throws UnknownHostException, IOException, InterruptedException {
 		Server serveur = new Server(DEFAULT_PORT);
 		serveur.waitForConnections();

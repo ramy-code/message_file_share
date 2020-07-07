@@ -1,7 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="e6b32137-1bcd-4696-80a2-68319811ebb7" name="Default Changelist" comment="" />
+    <list default="true" id="e6b32137-1bcd-4696-80a2-68319811ebb7" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/AbstractHost.java" beforeDir="false" afterPath="$PROJECT_DIR$/AbstractHost.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Client.java" beforeDir="false" afterPath="$PROJECT_DIR$/Client.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Controller.java" beforeDir="false" afterPath="$PROJECT_DIR$/Controller.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/LoginController.java" beforeDir="false" afterPath="$PROJECT_DIR$/LoginController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Server.java" beforeDir="false" afterPath="$PROJECT_DIR$/Server.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/message_file_share/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/message_file_share/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/message_file_share/AbstractHost$ClosedConnectionException.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/message_file_share/AbstractHost$ClosedConnectionException.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/message_file_share/AbstractHost.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/message_file_share/AbstractHost.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/message_file_share/Client$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/message_file_share/Client$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/message_file_share/Client.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/message_file_share/Client.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/message_file_share/Controller$UpdateCheckService$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/message_file_share/Controller$UpdateCheckService$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/message_file_share/Controller$UpdateCheckService.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/message_file_share/Controller$UpdateCheckService.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/message_file_share/Controller.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/message_file_share/Controller.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/message_file_share/LoginController.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/message_file_share/LoginController.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/message_file_share/Server$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/message_file_share/Server$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/message_file_share/Server$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/message_file_share/Server$2.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/message_file_share/Server.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/message_file_share/Server.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/message_file_share/rezo.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/message_file_share/rezo.fxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/rezo.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/rezo.fxml" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -18,10 +39,32 @@
   <component name="PropertiesComponent">
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
-    <property name="last_opened_file_path" value="$USER_HOME$/Downloads/openjfx-11.0.2_windows-x64_bin-sdk/javafx-sdk-11.0.2/lib" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="project.structure.last.edited" value="Libraries" />
     <property name="project.structure.proportion" value="0.0" />
     <property name="project.structure.side.proportion" value="0.2" />
+  </component>
+  <component name="RunManager" selected="Application.Server">
+    <configuration name="GUI" type="Application" factoryName="Application" singleton="false">
+      <option name="MAIN_CLASS_NAME" value="GUI" />
+      <module name="message_file_share" />
+      <option name="VM_PARAMETERS" value="--module-path &quot;C:\Users\dell\Downloads\openjfx-11.0.2_windows-x64_bin-sdk\javafx-sdk-11.0.2\lib&quot; --add-modules javafx.controls,javafx.fxml" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="Server" type="Application" factoryName="Application">
+      <option name="MAIN_CLASS_NAME" value="Server" />
+      <module name="message_file_share" />
+      <option name="VM_PARAMETERS" value="--module-path &quot;C:\Users\dell\Downloads\openjfx-11.0.2_windows-x64_bin-sdk\javafx-sdk-11.0.2\lib&quot; --add-modules javafx.controls,javafx.fxml" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <list>
+      <item itemvalue="Application.Server" />
+      <item itemvalue="Application.GUI" />
+    </list>
   </component>
   <component name="SvnConfiguration">
     <configuration />
@@ -41,14 +84,34 @@
       <screen x="0" y="0" width="1536" height="864" />
     </state>
     <state x="654" y="295" key="#Notifications/0.0.1536.864@0.0.1536.864" timestamp="1594063382287" />
-    <state x="223" y="87" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1594063714758">
+    <state x="341" y="73" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1594063867108">
       <screen x="0" y="0" width="1536" height="864" />
     </state>
-    <state x="223" y="87" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1536.864@0.0.1536.864" timestamp="1594063714758" />
+    <state x="341" y="73" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1536.864@0.0.1536.864" timestamp="1594063867108" />
+    <state x="616" y="208" key="#com.intellij.ide.util.TreeClassChooserDialog" timestamp="1594063778005">
+      <screen x="0" y="0" width="1536" height="864" />
+    </state>
+    <state x="616" y="208" key="#com.intellij.ide.util.TreeClassChooserDialog/0.0.1536.864@0.0.1536.864" timestamp="1594063778005" />
     <state x="473" y="173" key="FileChooserDialogImpl" timestamp="1594061729705">
       <screen x="0" y="0" width="1536" height="864" />
     </state>
     <state x="473" y="173" key="FileChooserDialogImpl/0.0.1536.864@0.0.1536.864" timestamp="1594061729705" />
+    <state width="1493" height="192" key="GridCell.Tab.0.bottom" timestamp="1594140725939">
+      <screen x="0" y="0" width="1536" height="864" />
+    </state>
+    <state width="1493" height="192" key="GridCell.Tab.0.bottom/0.0.1536.864@0.0.1536.864" timestamp="1594140725939" />
+    <state width="1493" height="192" key="GridCell.Tab.0.center" timestamp="1594140725938">
+      <screen x="0" y="0" width="1536" height="864" />
+    </state>
+    <state width="1493" height="192" key="GridCell.Tab.0.center/0.0.1536.864@0.0.1536.864" timestamp="1594140725938" />
+    <state width="1493" height="192" key="GridCell.Tab.0.left" timestamp="1594140725938">
+      <screen x="0" y="0" width="1536" height="864" />
+    </state>
+    <state width="1493" height="192" key="GridCell.Tab.0.left/0.0.1536.864@0.0.1536.864" timestamp="1594140725938" />
+    <state width="1493" height="192" key="GridCell.Tab.0.right" timestamp="1594140725939">
+      <screen x="0" y="0" width="1536" height="864" />
+    </state>
+    <state width="1493" height="192" key="GridCell.Tab.0.right/0.0.1536.864@0.0.1536.864" timestamp="1594140725939" />
     <state x="249" y="6" key="SettingsEditor" timestamp="1594061734745">
       <screen x="0" y="0" width="1536" height="864" />
     </state>
@@ -57,5 +120,9 @@
       <screen x="0" y="0" width="1536" height="864" />
     </state>
     <state x="578" y="346" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2/0.0.1536.864@0.0.1536.864" timestamp="1594061663138" />
+    <state x="425" y="197" key="run.anything.popup" timestamp="1594133384746">
+      <screen x="0" y="0" width="1536" height="864" />
+    </state>
+    <state x="425" y="197" key="run.anything.popup/0.0.1536.864@0.0.1536.864" timestamp="1594133384746" />
   </component>
 </project>

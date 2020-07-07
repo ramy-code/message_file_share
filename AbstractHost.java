@@ -1,9 +1,13 @@
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -12,8 +16,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public abstract class AbstractHost {
 	
 	protected volatile AtomicBoolean USER_INTERRUPTED = new AtomicBoolean(false);
+	protected final static int BUFFER_SIZE = 8096; //10 Ko
 	protected final static int DEFAULT_PORT = 42999;
-	protected final static byte FLAG_MESSAGE = (byte) 0x01;
+	protected static final byte FLAG_MESSAGE = (byte) 0x01;
 	protected final static byte FLAG_DATA_STREAM_OFFER = (byte) 0x02;
 	protected final static byte FLAG_FILE_SEND_RQST = (byte) 0x03;
 	protected final static byte FLAG_FILE_SEND_ACCEPT = (byte) 0x04;
@@ -21,7 +26,10 @@ public abstract class AbstractHost {
 	protected final static byte FLAG_PRIVATE_MESSAGE = (byte) 0x06;
 	protected final static byte FLAG_CONNECTED_MESSAGE = (byte) 0x07;
 	protected final static byte FLAG_DISCONNECTED_MESSAGE = (byte) 0x08;
-	protected final static byte FLAG_CLIENTS_LIST = (byte) 0x09;
+	protected static final byte FLAG_CLIENTS_LIST = (byte) 0x09;
+	protected static final byte FLAG_FILE = (byte) 0x0a;
+	
+	public volatile int avancement_transfert = 0;
 	
 	public class ClosedConnectionException extends IOException {
 		public ClosedConnectionException(String string) {
@@ -72,7 +80,7 @@ public abstract class AbstractHost {
 		return Arrays.copyOf(buffer, messageSize_copy);
 	}
 	
-	protected synchronized void sendMessage(OutputStream os, byte[] message) //Envoie un tableau de Byte brute
+	protected void sendMessage(OutputStream os, byte[] message) //Envoie un tableau de Byte brute
 	{
 		try {
 			os.write(message);
@@ -109,5 +117,29 @@ public abstract class AbstractHost {
 		
 		//sendMessage(os, messageBytes.array());
 		return messageBytes.array();
+	}
+	
+	protected byte[] receiveFile(InputStream is, int length) throws IOException //recoit un fichier et le retourne sous forme de tableau de bytes
+	{		
+		int b = 0;
+		int readBytes = 0;
+		int index = 0;
+		byte[] internalBuffer = new byte[length];
+		avancement_transfert = 0;
+
+		while(readBytes < length && (b = is.read(internalBuffer, index, Math.min(BUFFER_SIZE, length - readBytes))) != -1)
+		{
+			readBytes += b;
+			index += b;
+			//Mise à jour de l'affichage de l'avancement
+			avancement_transfert = readBytes*100/length;
+			System.out.println("Avancement : " + avancement_transfert + "%");
+		}
+		
+		if(b == -1)
+			throw new IOException("End of stream");
+		
+		System.out.println("Finished receiving");
+		return internalBuffer;
 	}
 }

@@ -4,8 +4,11 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.TextField;
+import javafx.scene.input.MouseEvent;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
+import java.io.File;
 import java.io.IOException;
 
 public class LoginController {
@@ -28,6 +31,13 @@ public class LoginController {
                 Stage stage = new Stage();
                 stage.setScene(new Scene(root));
                 stage.setTitle("Client");
+                /*Controller c = loader.getController();
+                c.stage = stage;
+                c.shareimg.setPickOnBounds(true);
+                c.shareimg.setOnMouseClicked((MouseEvent e)->{
+                    FileChooser fc = new FileChooser();
+                    File file = fc.showOpenDialog(c.stage);
+                });*/
                 stage.show();
             } catch (IOException e) {
                 e.printStackTrace();
