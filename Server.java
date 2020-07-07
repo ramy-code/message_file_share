@@ -53,7 +53,7 @@ public class Server extends AbstractHost{
 	
 	public void waitForConnections()
 	{
-		//Déclaration du Thread attendant la connexion
+		//DÃ©claration du Thread attendant la connexion
 		Thread listenThread = new Thread(new Runnable() {
 			public void run()
 			{
@@ -65,20 +65,20 @@ public class Server extends AbstractHost{
 					try
 					{
 						Socket connectionSocket = serverSocket.accept();
-						System.out.println("Hôte " + connectionSocket.getInetAddress().getHostName() + " / " + 
+						System.out.println("HÃ´te " + connectionSocket.getInetAddress().getHostName() + " / " + 
 								connectionSocket.getInetAddress().getHostAddress() +
-								":" + connectionSocket.getPort() + " connecté.");	//connection acceptée
+								":" + connectionSocket.getPort() + " connectÃ©.");	//connection acceptÃ©e
 						
 						//attendre la reception du username
 						String username = fetchUsername(connectionSocket.getInputStream());
-						System.out.println("Username du client reçu: " + username);
+						System.out.println("Username du client reÃ§u: " + username);
 						
-						//une fois reçu ajouter le client à la liste
+						//une fois reÃ§u ajouter le client Ã  la liste
 						ClientLog client = new ClientLog(username, connectionSocket);
 						synchronized(clientsList) {
 							if(!clientsList.contains(client)) {
 								clientsList.add(client);
-								//Lancer Thread d'écoute
+								//Lancer Thread d'Ã©coute
 								runListenThread(client);
 								broadcastClientList();
 								broadcastMessage(null, formatMessage(FLAG_MESSAGE, client.username + " has joined the chat."));
@@ -87,7 +87,7 @@ public class Server extends AbstractHost{
 								}
 							}else {
 								client.close();
-								System.out.println("Client déjà connecté !");
+								System.out.println("Client dÃ©jÃ  connectÃ© !");
 							}
 						}
 						System.out.println("liste des clients: ");
@@ -97,7 +97,7 @@ public class Server extends AbstractHost{
 					catch(IOException e)
 					{
 						/*
-						 * détecte si connexion impossible ou bien arrêtée par le thread principal 
+						 * dÃ©tecte si connexion impossible ou bien arrÃªtÃ©e par le thread principal 
 						*/
 						if(!USER_INTERRUPTED.get()) {
 							System.err.println("Impossible de se connecter au client.");
@@ -132,8 +132,8 @@ public class Server extends AbstractHost{
 			remainingBytes -= size;
 		}
 		
-		if(remainingBytes == -1 || size == -1)	//Si OutputStream du client est fermé alors fermer ce socket
-			throw new ClosedConnectionException("Connexion fermée par le client");
+		if(remainingBytes == -1 || size == -1)	//Si OutputStream du client est fermÃ© alors fermer ce socket
+			throw new ClosedConnectionException("Connexion fermÃ©e par le client");
 		
 		return new String(buffer).trim();
 	}
@@ -143,7 +143,7 @@ public class Server extends AbstractHost{
 		Thread listenThread = new Thread(new Runnable() {
 			public void run()
 			{
-				//Boucle d'écoute des messages reçus
+				//Boucle d'Ã©coute des messages reÃ§us
 				InputStream is = client.is;
 				while(client.connected.get())
 				{
@@ -278,21 +278,21 @@ public class Server extends AbstractHost{
 			sendMessage(os, formatMessage(FLAG_FILE_SEND_RQST, fileName + " (" + length + " octets)"));
 		}
 		
-		//Lancement du thread qui attend la réponse et envoie le fichier
+		//Lancement du thread qui attend la rÃ©ponse et envoie le fichier
 		Thread fileTransfertThread = new Thread(new Runnable() {
 			public void run()
 			{
 				try {
 					if(semWaitApproval.tryAcquire(60, TimeUnit.SECONDS)) {
 						if(semApproved.tryAcquire(0, TimeUnit.SECONDS)) {
-							//Transfert de fichier accepté par le client: commencer à envoyer
-							System.out.println("trasfert de fichier accepté");
+							//Transfert de fichier acceptÃ© par le client: commencer Ã  envoyer
+							System.out.println("trasfert de fichier acceptÃ©");
 							synchronized(os) {
 								sendMessage(os, formatMessage(FLAG_FILE, fileName + "|" + length));
 								sendMessage(os, fileData);
 							}
 						}
-						else System.out.println("transfert de fichier refusé");
+						else System.out.println("transfert de fichier refusÃ©");
 					}
 				} catch (InterruptedException e) {
 					e.printStackTrace();
@@ -325,7 +325,7 @@ public class Server extends AbstractHost{
 	}
 	
 	private DatagramSocket runDiscoveryListener() {
-		//Lance un thread qui reste en écoute aux messages de découverte
+		//Lance un thread qui reste en Ã©coute aux messages de dÃ©couverte
 		boolean socketOpened = false;
 		for(int i = 0; i < 10 && !socketOpened; i++) {
 			try {
@@ -343,13 +343,13 @@ public class Server extends AbstractHost{
 		
 		Thread discoveryListenThread = new Thread(new Runnable() {
 			public void run() {
-				while(true) { //reste en écoute tant que udpSocket reste ouvert
+				while(true) { //reste en Ã©coute tant que udpSocket reste ouvert
 					byte[] dpBuffer = new byte[5];
 					DatagramPacket packet = new DatagramPacket(dpBuffer, dpBuffer.length);
 					int receivedPort = -1;
 					
 					try {
-						udpSocket.receive(packet); //en écoute des messages de découverte (se débloque si udpSocket est fermé de l'extérieur)
+						udpSocket.receive(packet); //en Ã©coute des messages de dÃ©couverte (se dÃ©bloque si udpSocket est fermÃ© de l'extÃ©rieur)
 						if(dpBuffer[0] == FLAG_SERVER_DISCOVERY) {
 							receivedPort = ByteBuffer.wrap(packet.getData(), 1, 4).getInt();
 							ByteBuffer bbuf = ByteBuffer.allocate(5);
