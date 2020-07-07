@@ -25,6 +25,7 @@ public class Server extends AbstractHost{
 	private volatile Semaphore semWaitApproval = new Semaphore(0, true);
 	private volatile Semaphore semApproved = new Semaphore(0, true);
 	private volatile DatagramSocket udpSocket = null;
+	private LinkedList<Socket> connectionSockets = null;
 
 	public Server() throws UnknownHostException, IOException
 	{
@@ -46,6 +47,8 @@ public class Server extends AbstractHost{
 		localIP = hostingIP;
 		serverSocket = new ServerSocket(port, 10, InetAddress.getByName(localIP));
 		clientsList = new LinkedList<ClientLog>();
+		connectionSockets = new LinkedList<Socket>();
+		this.port = serverSocket.getLocalPort();
 	}
 	
 	public void waitForConnections()
@@ -56,6 +59,8 @@ public class Server extends AbstractHost{
 			{
 				udpSocket = runDiscoveryListener();
 				while(true) {
+					if(serverSocket == null || serverSocket.isClosed())
+						return;
 					System.out.println("En attente de connexion sur l'addresse : " + serverSocket.getLocalSocketAddress() +  "...");
 					try
 					{
@@ -77,6 +82,9 @@ public class Server extends AbstractHost{
 								runListenThread(client);
 								broadcastClientList();
 								broadcastMessage(null, formatMessage(FLAG_MESSAGE, client.username + " vient de rejoindre la discussion."));
+								synchronized (connectionSockets) {
+									connectionSockets.add(connectionSocket);
+								}
 							}else {
 								client.close();
 								System.out.println("Client déjà connecté !");
@@ -347,7 +355,7 @@ public class Server extends AbstractHost{
 							ByteBuffer bbuf = ByteBuffer.allocate(5);
 							bbuf.put(FLAG_SERVER_AD);
 							bbuf.putInt(port);
-							DatagramPacket responsePacket = new DatagramPacket(bbuf.array(), 5, udpSocket.getInetAddress(), receivedPort);
+							DatagramPacket responsePacket = new DatagramPacket(bbuf.array(), 5, packet.getAddress(), receivedPort);
 							udpSocket.send(responsePacket);
 						}
 					} catch (IOException e) {
@@ -367,13 +375,20 @@ public class Server extends AbstractHost{
 			serverSocket.close();
 			if(udpSocket != null)
 				udpSocket.close();
+			if(connectionSockets != null) {
+				for(Socket s : connectionSockets) {
+					if(!s.isClosed()) {
+						s.close();
+					}
+				}
+			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
 	
 	public static void main(String[] args) throws UnknownHostException, IOException, InterruptedException {
-		Server serveur = new Server(DEFAULT_PORT);
+		Server serveur = new Server();
 		serveur.waitForConnections();
 	}
 }

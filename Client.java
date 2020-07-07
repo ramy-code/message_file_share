@@ -10,6 +10,7 @@ import java.io.OutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketException;
@@ -254,9 +255,18 @@ public class Client extends AbstractHost{
 		return data;
 	}
 	
-	public void broadcastServerDiscovery(int port) {
-		//Diffuse aux serveurs potentiels le port UDP sur lequel envoyer leur IP et port de connexion
+	public static InetSocketAddress broadcastServerDiscovery() {
+		//Diffuse aux serveurs potentiels le port UDP sur lequel envoyer leur IP et port de connexion (dans un thread) et attend la réponse ici
 		
+		DatagramSocket udpsocket;
+		try {
+			udpsocket = new DatagramSocket();
+		} catch (SocketException e1) {
+			e1.printStackTrace();
+			return null;
+		}
+		
+		int port = udpsocket.getLocalPort();
 		Thread broadcastThread = new Thread(new Runnable() {
 		public void run() {
 			try {
@@ -287,36 +297,48 @@ public class Client extends AbstractHost{
 		});
 	
 		broadcastThread.start();
+		
+		return waitServerAdvertistment(udpsocket);
 	}
 	
-	/*public SocketAddress waitServerAdvertistment() {
+	public static InetSocketAddress waitServerAdvertistment(DatagramSocket udpSocket) {
 		//Se met en écoute aux advertisments des serveurs potentiels
-		byte[] dpBuffer = new byte[5];
-		DatagramPacket packet = new DatagramPacket(dpBuffer, dpBuffer.length);
-		int receivedPort = -1;
-		
+		//!---------le socket donné en paramètre doit être instancié à l'avance------------!
+		InetSocketAddress serverInfo = null;
 		try {
-			udpSocket.receive(packet); //en écoute des messages de découverte (se débloque si udpSocket est fermé de l'extérieur)
-			if(dpBuffer[0] == FLAG_SERVER_DISCOVERY) {
-				receivedPort = ByteBuffer.wrap(packet.getData(), 1, 4).getInt();
-				ByteBuffer bbuf = ByteBuffer.allocate(5);
-				bbuf.put(FLAG_SERVER_AD);
-				bbuf.putInt(port);
-				DatagramPacket responsePacket = new DatagramPacket(bbuf.array(), 5, udpSocket.getInetAddress(), receivedPort);
-				udpSocket.send(responsePacket);
+			InetAddress serverIP = null;
+			int serverPort = -1;
+			udpSocket.setSoTimeout(3000);
+			byte[] dpBuffer = new byte[5];
+			DatagramPacket packet = new DatagramPacket(dpBuffer, dpBuffer.length);
+			udpSocket.receive(packet); //en écoute des messages de découverte (se débloque au bout de 3000ms)
+			if(dpBuffer[0] == FLAG_SERVER_AD) {
+				//serverIP = udpSocket.getInetAddress();
+				serverIP = packet.getAddress();
+				serverPort = ByteBuffer.wrap(packet.getData(), 1, 4).getInt();
+				serverInfo = new InetSocketAddress(serverIP, serverPort);
+				udpSocket.close();
 			}
 		} catch (IOException e) {
-				return;
+				e.printStackTrace();
+		} finally {
+			return serverInfo;
 		}
-	}*/
+	}
 	
 	public static void main(String args[]) throws UnknownHostException, IOException, InterruptedException {
 		Scanner sc = new Scanner(System.in);
-		System.out.println("Connexion au serveur 192.168.1.41");
+		//System.out.println("Connexion au serveur 192.168.1.41");
+		InetSocketAddress serverInfo = Client.broadcastServerDiscovery();
 		System.out.println("Veuillez entrer votre username:");
-		Client client = new Client("192.168.1.36", sc.nextLine());
+		Client client = null;;
+		if(serverInfo != null) {
+			System.out.println("Connexion au serveur " + serverInfo.getAddress().getHostAddress() + ":" + serverInfo.getPort());
+			client = new Client(serverInfo.getAddress().getHostAddress(), serverInfo.getPort(), sc.nextLine());
+		}
+		else System.err.println("serverInfo Null");
 		client.runListenThread();
-		Thread.sleep(500);
+		/*Thread.sleep(500);
 		System.out.println("Liste des clients connectés: ");
 		client.requestClientsList();
 		sc.nextLine();
